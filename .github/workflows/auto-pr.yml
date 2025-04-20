@@ -1,0 +1,97 @@
+name: Auto PR and Merge
+
+on:
+  create:
+    branches:
+      - "[0-9]*"
+  push:
+    branches:
+      - "[0-9]*"
+
+permissions:
+  pull-requests: write
+  contents: write
+  checks: write
+  issues: read
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Exit if no changes
+        run: |
+          if [ -z "$(git diff --name-only HEAD~1 HEAD)" ]; then
+            echo "No changes to make PR"
+            exit 0
+          fi
+
+      - name: Get PR body
+        id: get-pr-body
+        run: |
+          PR_BODY=$(bash .github/scripts/make-pr-body.sh ${{ github.ref_name }})
+
+          # Escape special characters in PR body
+          PR_BODY=$(echo "$PR_BODY" | sed 's/[][(){}*?$^&|`"'\''\\]/\\&/g')
+
+          echo "pr_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$PR_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Extract issue number and get labels
+        id: get-issue
+        run: |
+          # Extract issue number from branch name
+          ISSUE_NUMBER=$(echo "${{ github.ref_name }}" | grep -o '^[0-9]*')
+
+          # Get issue labels
+          LABELS=$(gh issue view $ISSUE_NUMBER --json labels --jq '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+          TITLE=$(gh issue view $ISSUE_NUMBER --json title --jq '.title')
+
+          # Replace 'Bug' with 'Fix' in labels
+          LABELS=$(echo "$LABELS" | sed 's/Bug/Fix/g')
+
+          # Replace 'bug:' with 'fix:' in title
+          TITLE=$(echo "$TITLE" | sed 's/^bug:/fix:/i')
+
+          # Escape all special characters
+          TITLE=$(echo "$TITLE" | sed 's/[][(){}*?$^&|`"'\''\\]/\\&/g')
+
+          echo "issue_title=$TITLE" >> $GITHUB_OUTPUT
+          echo "labels=$LABELS" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request
+        id: create-pr
+        run: |
+          # Try to create PR, ignore error if PR already exists
+          PR_LINK=$(gh pr create \
+            --title "${{ steps.get-issue.outputs.issue_title }}" \
+            --body "${{ steps.get-pr-body.outputs.pr_body }}" \
+            --base main \
+            --head "${{ github.ref_name }}" \
+            --assignee "${{ github.actor }}" \
+            --label "${{ steps.get-issue.outputs.labels }}" 2>/dev/null || true)
+
+          # If PR creation failed (likely because it exists), get the existing PR
+          if [ -z "$PR_LINK" ]; then
+            PR_LINK=$(gh pr view "${{ github.ref_name }}" --json url --jq '.url' 2>/dev/null || true)
+          fi
+
+          if [ ! -z "$PR_LINK" ]; then
+            echo "pull-request-link=$PR_LINK" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable Auto-merge
+        if: steps.create-pr.outputs.pull-request-link
+        run: |
+          gh pr merge ${{ steps.create-pr.outputs.pull-request-link }} --auto --squash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

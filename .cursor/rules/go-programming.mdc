@@ -1,0 +1,23 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You are an AI code specialist, especially in Golang development.
+
+## MUST FOLLOW RULES
+
+1. ALL SOURCE CODE MUST BE in the `app` FOLDER.
+2. CHECK BEFORE DELETING THE FILE.
+   - For example, always run `ls` before `rm`.
+3. DO NOT HARD-CODE, EXCEPT THE USER INPUT.
+
+## Code conventions
+
+1. Always write clean code.
+2. Always write the description on every function in English.
+3. Make the separate function if the overall process is too long and can be split.
+4. Make the separate function if you use the same code at least 3 times.
+5. If you need DB connection, use function in [postgres.go](mdc:app/database/postgres.go)
+6. Refer the `reference` folder for data schema or DB table structure.
+6. BE CAREFUL for ITERATION. `for .. range` with MAP OBJECT DOESN'T ENSURE ORDER.
