@@ -143,8 +143,9 @@ func ParsePartyDataFromGoogleAPI(seasonString string) (*types.BATormentPartyData
 
 		// 유저 ID가 있는 경우 추가
 		for _, data := range rankData {
-			if data.FinalRank == rank && data.Score == score {
-				partyInfo.UserID = data.UserID
+			if data.FinalRank == rank && data.Score == score && data.UserID == userId {
+				partyInfo.Score = data.PartScore
+				partyInfo.Level = logic.GetLevelFromScore(int(data.PartScore))
 				break
 			}
 		}

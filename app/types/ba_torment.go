@@ -61,11 +61,12 @@ type NamedUser struct {
 }
 
 // *************************************
-// ********** Pasesd from CSV **********
+// ********** Parsed from CSV **********
 // *************************************
 
 type RankData struct {
 	UserID    int64
 	FinalRank int
 	Score     int64
+	PartScore int64
 }
