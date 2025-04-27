@@ -95,6 +95,7 @@ func getGrandAssaultRankData(seasonString string, category int) ([]types.RankDat
 	if err != nil {
 		return nil, common.WrapErrorWithContext("getGrandAssaultRankData", err)
 	}
+	reader.FieldsPerRecord = -1
 
 	// Find the column indices
 	var userIDIdx, rankIdx, scoreIdx int
