@@ -15,7 +15,7 @@ func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.
 	for _, data := range partyData.PartyDetail {
 		if data.Level == "L" {
 			lunaticData = append(lunaticData, data)
-		} else if data.Level == "T" {
+		} else if data.Level == "T" || data.Level == "I" {
 			tormentData = append(tormentData, data)
 		}
 	}
@@ -34,6 +34,16 @@ func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.
 
 // processLevelData는 각 레벨의 데이터를 처리합니다.
 func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCount, tormentCount int) types.BATormentLevelData {
+	if len(data) == 0 {
+		return types.BATormentLevelData{
+			ClearCount:    len(data),
+			PartyCounts:   make(map[string][]int),
+			Filters:       make(map[string][]int),
+			AssistFilters: make(map[string][]int),
+			Top5Partys:    make([][]interface{}, 0),
+		}
+	}
+
 	result := types.BATormentLevelData{
 		ClearCount:    len(data),
 		PartyCounts:   make(map[string][]int),
