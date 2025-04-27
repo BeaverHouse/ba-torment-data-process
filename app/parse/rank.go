@@ -66,9 +66,9 @@ func getTotalAssaultRankData(seasonString string) ([]types.RankData, error) {
 			return nil, fmt.Errorf("failed to read record: %w", err)
 		}
 
-		userID, _ := strconv.ParseInt(record[userIDIdx], 10, 64)
+		userID, _ := strconv.Atoi(record[userIDIdx])
 		rank, _ := strconv.Atoi(record[rankIdx])
-		score, _ := strconv.ParseInt(record[scoreIdx], 10, 64)
+		score, _ := strconv.Atoi(record[scoreIdx])
 
 		if rank > PlatinumCut {
 			break
@@ -78,6 +78,7 @@ func getTotalAssaultRankData(seasonString string) ([]types.RankData, error) {
 			UserID:    userID,
 			FinalRank: rank,
 			Score:     score,
+			PartScore: score,
 		})
 	}
 
@@ -95,17 +96,20 @@ func getGrandAssaultRankData(seasonString string, category int) ([]types.RankDat
 	if err != nil {
 		return nil, common.WrapErrorWithContext("getGrandAssaultRankData", err)
 	}
+	reader.FieldsPerRecord = -1
 
 	// Find the column indices
-	var userIDIdx, rankIdx, scoreIdx int
+	var userIDIdx, rankIdx, scoreIdx, partScoreIdx int
 	for i, col := range header {
 		switch col {
 		case "AccountId":
 			userIDIdx = i
 		case "Rank":
 			rankIdx = i
-		case fmt.Sprintf("Boss%d", category):
+		case "BestRankingPoint":
 			scoreIdx = i
+		case fmt.Sprintf("Boss%d", category):
+			partScoreIdx = i
 		}
 	}
 
@@ -121,8 +125,9 @@ func getGrandAssaultRankData(seasonString string, category int) ([]types.RankDat
 		}
 
 		rank, _ := strconv.Atoi(record[rankIdx])
-		score, _ := strconv.ParseInt(record[scoreIdx], 10, 64)
-		userID, _ := strconv.ParseInt(record[userIDIdx], 10, 64)
+		score, _ := strconv.Atoi(record[scoreIdx])
+		partScore, _ := strconv.Atoi(record[partScoreIdx])
+		userID, _ := strconv.Atoi(record[userIDIdx])
 
 		if rank > PlatinumCut {
 			break
@@ -132,6 +137,7 @@ func getGrandAssaultRankData(seasonString string, category int) ([]types.RankDat
 			UserID:    userID,
 			FinalRank: rank,
 			Score:     score,
+			PartScore: partScore,
 		})
 	}
 

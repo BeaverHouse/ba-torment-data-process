@@ -16,8 +16,8 @@ type BATormentPartyData struct {
 type BATormentPartyDetail struct {
 	FinalRank   int              `json:"FINAL_RANK"`
 	TormentRank int              `json:"TORMENT_RANK"`
-	Score       int64            `json:"SCORE"`
-	UserID      int64            `json:"USER_ID"`
+	Score       int              `json:"SCORE"`
+	UserID      int              `json:"USER_ID"`
 	Level       string           `json:"LEVEL"`
 	PartyData   map[string][]int `json:"PARTY_DATA"`
 }
@@ -61,11 +61,12 @@ type NamedUser struct {
 }
 
 // *************************************
-// ********** Pasesd from CSV **********
+// ********** Parsed from CSV **********
 // *************************************
 
 type RankData struct {
-	UserID    int64
+	UserID    int
 	FinalRank int
-	Score     int64
+	Score     int
+	PartScore int
 }
