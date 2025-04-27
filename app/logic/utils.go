@@ -38,5 +38,5 @@ func SplitSeasonString(season string) (string, int, error) {
 	if err != nil {
 		return "", -1, common.WrapErrorWithContext("SplitSeasonString", err)
 	}
-	return parts[0], category, nil
+	return strings.Replace(parts[0], "3S", "S", 1), category, nil
 }
