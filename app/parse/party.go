@@ -20,7 +20,7 @@ func ParsePartyDataFromGoogleAPI(seasonString string) (*types.BATormentPartyData
 	}
 
 	// 유저 ID와 랭킹 매핑
-	userRankMap := make(map[int64]int)
+	userRankMap := make(map[int]int)
 	for _, data := range rankData {
 		userRankMap[data.UserID] = data.FinalRank
 	}
@@ -50,8 +50,8 @@ func ParsePartyDataFromGoogleAPI(seasonString string) (*types.BATormentPartyData
 
 		// 기본 정보 추출 (인덱스 0: Rank, 1: BestRankingPoint)
 		rank, _ := strconv.Atoi(record[0])
-		score, _ := strconv.ParseInt(record[1], 10, 64)
-		userId, _ := strconv.ParseInt(record[2], 10, 64)
+		score, _ := strconv.Atoi(record[1])
+		userId, _ := strconv.Atoi(record[2])
 		finalRank := userRankMap[userId]
 
 		// 파티 데이터 추출
@@ -217,8 +217,8 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 
 		partyInfo := types.BATormentPartyDetail{
 			FinalRank:   rank,
-			Score:       int64(score),
-			UserID:      int64(-(idx + 1)),
+			Score:       score,
+			UserID:      -(idx + 1),
 			Level:       level,
 			PartyData:   partyData,
 			TormentRank: rank,

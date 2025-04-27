@@ -32,7 +32,7 @@ func ComparePartyData(t *testing.T, parsedPartyData *types.BATormentPartyData, b
 	// 파티 데이터 비교
 	for i := range parsedPartyData.PartyDetail {
 		if isAronaAI {
-			baTormentPartyData.PartyDetail[i].UserID = int64(-i - 1)
+			baTormentPartyData.PartyDetail[i].UserID = -i - 1
 		}
 		require.Equal(t, parsedPartyData.PartyDetail[i], baTormentPartyData.PartyDetail[i], "%d번째 파티 데이터가 일치하지 않습니다", i)
 	}
