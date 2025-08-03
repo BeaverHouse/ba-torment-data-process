@@ -3,3 +3,6 @@
 
 # Test files
 /app/tests/files/*
+
+# Arona AI data
+/data
