@@ -1,8 +1,10 @@
 package parse
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 
 	"ba-torment-data-process/app/common"
@@ -167,10 +169,13 @@ func ParsePartyDataFromGoogleAPI(seasonString string) (*types.BATormentPartyData
 // It's a secondary option if Google API is not available.
 func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, error) {
 
-	aronaAIData, err := data.GetDataFromAronaAI(seasonString)
+	var aronaAIData *types.AronaAIData
+	fileName := fmt.Sprintf("data/%s.json", seasonString)
+	jsonBytes, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, common.WrapErrorWithContext("ParsePartyDataFromAronaAI", err)
 	}
+	json.Unmarshal(jsonBytes, &aronaAIData)
 
 	filters := make(map[string][]int)
 	assistFilters := make(map[string][]int)

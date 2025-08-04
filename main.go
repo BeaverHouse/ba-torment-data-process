@@ -15,4 +15,6 @@ func main() {
 	batch.UpdateStudentInfo()
 	// batch.UpdateYouTubeChannels()
 	batch.DeleteOldRaidData(200)
+
+	// batch.ScrapeAronaAI()
 }

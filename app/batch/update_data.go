@@ -6,7 +6,6 @@ import (
 	"ba-torment-data-process/app/database"
 	"ba-torment-data-process/app/parse"
 	"ba-torment-data-process/app/types"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -30,12 +29,9 @@ func UpdateData() {
 		var partyData *types.BATormentPartyData
 		var summaryData *types.BATormentSummaryData
 
-		// Get from Arona AI if the raid is older than 10 days
-		if raid.CreatedAt.Before(time.Now().AddDate(0, 0, -10)) {
-			partyData, err = parse.ParsePartyDataFromAronaAI(raid.RaidID)
-		} else {
-			partyData, err = parse.ParsePartyDataFromGoogleAPI(raid.RaidID)
-		}
+		// Get from Arona AI
+		partyData, err = parse.ParsePartyDataFromAronaAI(raid.RaidID)
+
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
