@@ -6,6 +6,7 @@ import (
 	"log"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -33,9 +34,11 @@ func GetDataFromAronaAI(seasonString string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	seasonNum, err := strconv.Atoi(season[1:])
-	if err != nil {
-		return "", err
+	// S와 3S를 제거하고 숫자로 변환
+	if strings.HasPrefix(season, "3S") {
+		season = season[2:]
+	} else if strings.HasPrefix(season, "S") {
+		season = season[1:]
 	}
 
 	url := "https://arona.ai/raidreport"
@@ -50,7 +53,28 @@ func GetDataFromAronaAI(seasonString string) (string, error) {
 		// 1. 알맞은 시즌을 선택합니다. (seasonNum + . 으로 시작하는 div 클릭 (ex. 79. 으로 시작하는))
 		chromedp.WaitVisible(`//div[@role="combobox"]`),
 		chromedp.Click(`//div[@role="combobox"]`, chromedp.NodeVisible),
-		chromedp.Click(`//li[@data-value="`+strconv.Itoa(seasonNum)+`"]`, chromedp.NodeVisible),
+		chromedp.Click(`//li[@data-value="`+season+`"]`, chromedp.NodeVisible),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	// 1-1. Category가 0이 아닐 경우, 알맞은 대결전을 선택해야 합니다.
+	// 맨 마지막 MuiToggleButtonGroup-root div에 있는 category번째 button을 클릭합니다.
+	if category != 0 {
+		err = chromedp.Run(ctx,
+			chromedp.WaitVisible(`//div[contains(@class,"MuiToggleButtonGroup-root")]`),
+			chromedp.ScrollIntoView(`(//div[contains(@class,"MuiToggleButtonGroup-root")])[last()]`),
+			chromedp.Sleep(500*time.Millisecond), // 스크롤 완료 대기
+			// 맨 마지막 MuiToggleButtonGroup-root div에 있는 category번째 button을 클릭합니다.
+			chromedp.Click(`(//div[contains(@class,"MuiToggleButtonGroup-root")])[last()]//button[`+strconv.Itoa(category)+`]`, chromedp.NodeVisible),
+		)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	err = chromedp.Run(ctx,
 
 		// 2. "직접 검색" 버튼이 보일 때까지 스크롤하고 클릭합니다.
 		chromedp.WaitVisible(`//div[text()="직접 검색"]`),

@@ -11,7 +11,8 @@ import (
 func ScrapeAronaAI() {
 	log.Println("Starting to scrape data from arona.ai")
 
-	seasons := []string{"S79-0", "S78-0"}
+	// seasons := []string{"S79-0", "S78-0"}
+	seasons := []string{"S23-1"}
 
 	for _, season := range seasons {
 		data, err := scrape.GetDataFromAronaAI(season)
