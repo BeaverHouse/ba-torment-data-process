@@ -27,7 +27,7 @@ func GetDataFromAronaAI(seasonString string) (string, error) {
 	defer cancel()
 
 	// create a timeout
-	ctx, cancel = context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	season, category, err := logic.SplitSeasonString(seasonString)
@@ -47,15 +47,53 @@ func GetDataFromAronaAI(seasonString string) (string, error) {
 	}
 
 	var tValue string
+
+	log.Printf("Navigating to %s", url)
 	err = chromedp.Run(ctx,
 		chromedp.Navigate(url),
-
-		// 1. 알맞은 시즌을 선택합니다. (seasonNum + . 으로 시작하는 div 클릭 (ex. 79. 으로 시작하는))
-		chromedp.WaitVisible(`//div[@role="combobox"]`),
-		chromedp.Click(`//div[@role="combobox"]`, chromedp.NodeVisible),
-		chromedp.Click(`//li[@data-value="`+season+`"]`, chromedp.NodeVisible),
+		chromedp.WaitReady("body"),
+		chromedp.Sleep(1*time.Second),
 	)
 	if err != nil {
+		log.Printf("Navigation failed: %v", err)
+		return "", err
+	}
+
+	log.Printf("Waiting for combobox and opening season selector")
+	err = chromedp.Run(ctx,
+		chromedp.WaitVisible(`//div[@role="combobox"]`, chromedp.BySearch),
+		chromedp.Sleep(1*time.Second),
+		chromedp.Click(`//div[@role="combobox"]`, chromedp.NodeVisible),
+		chromedp.Sleep(1*time.Second),
+	)
+	if err != nil {
+		log.Printf("Failed to open season selector: %v", err)
+		return "", err
+	}
+
+	log.Printf("Checking if season %s exists", season)
+	var seasonExists bool
+	err = chromedp.Run(ctx,
+		chromedp.Evaluate(`document.querySelector('li[data-value="`+season+`"]') !== null`, &seasonExists),
+	)
+	if err != nil {
+		log.Printf("Failed to check season existence: %v", err)
+		return "", err
+	}
+
+	// Season이 존재하지 않으면 로그 출력 후 종료
+	if !seasonExists {
+		log.Printf("Season %s not found in arona.ai", season)
+		return "", nil
+	}
+
+	log.Printf("Selecting season %s", season)
+	err = chromedp.Run(ctx,
+		chromedp.Click(`//li[@data-value="`+season+`"]`, chromedp.NodeVisible),
+		chromedp.Sleep(1*time.Second),
+	)
+	if err != nil {
+		log.Printf("Failed to select season: %v", err)
 		return "", err
 	}
 
@@ -64,10 +102,12 @@ func GetDataFromAronaAI(seasonString string) (string, error) {
 	if category != 0 {
 		err = chromedp.Run(ctx,
 			chromedp.WaitVisible(`//div[contains(@class,"MuiToggleButtonGroup-root")]`),
+			chromedp.Sleep(1*time.Second),
 			chromedp.ScrollIntoView(`(//div[contains(@class,"MuiToggleButtonGroup-root")])[last()]`),
-			chromedp.Sleep(500*time.Millisecond), // 스크롤 완료 대기
+			chromedp.Sleep(1*time.Second), // 스크롤 완료 대기
 			// 맨 마지막 MuiToggleButtonGroup-root div에 있는 category번째 button을 클릭합니다.
 			chromedp.Click(`(//div[contains(@class,"MuiToggleButtonGroup-root")])[last()]//button[`+strconv.Itoa(category)+`]`, chromedp.NodeVisible),
+			chromedp.Sleep(1*time.Second),
 		)
 		if err != nil {
 			return "", err
@@ -78,7 +118,9 @@ func GetDataFromAronaAI(seasonString string) (string, error) {
 
 		// 2. "직접 검색" 버튼이 보일 때까지 스크롤하고 클릭합니다.
 		chromedp.WaitVisible(`//div[text()="직접 검색"]`),
+		chromedp.Sleep(1*time.Second),
 		chromedp.ScrollIntoView(`//div[text()="직접 검색"]`),
+		chromedp.Sleep(1*time.Second),
 		chromedp.Click(`//div[text()="직접 검색"]`, chromedp.NodeVisible),
 		chromedp.Sleep(1*time.Second), // UI 업데이트 대기
 
@@ -91,13 +133,17 @@ func GetDataFromAronaAI(seasonString string) (string, error) {
 				return JSON_parse_original(t, r); // 원래 JSON.parse 호출
 			};
 		})();`, nil),
+		chromedp.Sleep(1*time.Second),
 
 		// 3. role="combobox"인 5번째 div를 클릭합니다.
 		chromedp.WaitVisible(`(//div[@role="combobox"])[5]`),
+		chromedp.Sleep(1*time.Second),
 		chromedp.Click(`(//div[@role="combobox"])[5]`, chromedp.NodeVisible),
+		chromedp.Sleep(1*time.Second),
 
 		// 4. data-value="20000"인 li를 클릭합니다.
 		chromedp.WaitVisible(`//li[@data-value="20000"]`),
+		chromedp.Sleep(1*time.Second),
 		chromedp.Click(`//li[@data-value="20000"]`, chromedp.NodeVisible),
 
 		// 5. 데이터가 로드되기를 기다립니다.
