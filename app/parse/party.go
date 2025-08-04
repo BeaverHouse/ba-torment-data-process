@@ -170,7 +170,7 @@ func ParsePartyDataFromGoogleAPI(seasonString string) (*types.BATormentPartyData
 func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, error) {
 
 	var aronaAIData *types.AronaAIData
-	fileName := fmt.Sprintf("%s.json", seasonString)
+	fileName := fmt.Sprintf("data/%s.json", seasonString)
 	jsonBytes, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, common.WrapErrorWithContext("ParsePartyDataFromAronaAI", err)
