@@ -1,9 +1,10 @@
-# Arona AI Data 명세
+# (Deprecated) Google API Data 명세
 
 > [!NOTE]
 > This document is written in Korean.
 
-[Google API](https://storage.googleapis.com/info.herdatasam.me/)에서 제공하는 총력전 데이터 명세입니다.
+[Google API](https://storage.googleapis.com/info.herdatasam.me/)에서 제공하는 총력전 데이터 명세입니다.  
+현재는 업데이트되지 않고 있습니다. (차후에 사용할 수 있으므로 문서만 유지합니다.)
 
 ## 데이터 형식
 
