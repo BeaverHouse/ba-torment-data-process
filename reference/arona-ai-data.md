@@ -3,7 +3,7 @@
 > [!NOTE]
 > This document is written in Korean.
 
-[arona.ai](https://arona.ai)에서 제공하는 총력전 데이터 명세입니다.
+[arona.ai](https://arona.ai)의 총력전 데이터 명세입니다.
 
 ## 데이터 형식
 
