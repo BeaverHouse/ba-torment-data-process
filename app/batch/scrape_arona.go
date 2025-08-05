@@ -17,6 +17,11 @@ func ScrapeAronaAI() {
 		log.Fatalf("Failed to get pending raids: %v", err)
 	}
 
+	if len(pendingRaids) == 0 {
+		log.Println("No pending raids found.")
+		return
+	}
+
 	for _, raid := range pendingRaids {
 		seasonString := raid.RaidID
 		data, err := scrape.GetDataFromAronaAI(seasonString)
