@@ -1,6 +1,7 @@
 package batch
 
 import (
+	"ba-torment-data-process/app/database"
 	"ba-torment-data-process/scrape"
 	"encoding/json"
 	"fmt"
@@ -11,12 +12,14 @@ import (
 func ScrapeAronaAI() {
 	log.Println("Starting to scrape data from arona.ai")
 
-	// seasons := []string{"S79-0", "S78-0"}
-	seasons := []string{"S23-3"}
-	// seasons := []string{"S33-1"}
+	pendingRaids, err := database.GetPendingRaids()
+	if err != nil {
+		log.Fatalf("Failed to get pending raids: %v", err)
+	}
 
-	for _, season := range seasons {
-		data, err := scrape.GetDataFromAronaAI(season)
+	for _, raid := range pendingRaids {
+		seasonString := raid.RaidID
+		data, err := scrape.GetDataFromAronaAI(seasonString)
 		if err != nil {
 			log.Fatalf("Failed to get data from arona.ai: %v", err)
 		}
@@ -31,7 +34,7 @@ func ScrapeAronaAI() {
 
 		// save tValue to file
 		json.Marshal(data)
-		os.WriteFile("data/"+season+".json", []byte(data), 0644)
+		os.WriteFile("data/"+seasonString+".json", []byte(data), 0644)
 	}
 
 	log.Println("Successfully scraped data.")
