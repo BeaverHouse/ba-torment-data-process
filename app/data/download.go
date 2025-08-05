@@ -2,12 +2,9 @@ package data
 
 import (
 	"ba-torment-data-process/app/common"
-	"ba-torment-data-process/app/logic"
 	"ba-torment-data-process/app/types"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // Words
@@ -22,8 +19,7 @@ var (
 		"S21-2": "https://media.arona.ai/data/v3/eraid/21/team-in20000-Chesed_Indoor_HeavyArmor",
 		"S21-3": "https://media.arona.ai/data/v3/eraid/21/team-in20000-Chesed_Indoor_ElasticArmor",
 	}
-	schaleDBURL  string = "https://schaledb.com/"
-	googleAPIURL string = "https://storage.googleapis.com/info.herdatasam.me/BlueArchiveJP/"
+	schaleDBURL string = "https://schaledb.com/"
 )
 
 // Get data from Arona.AI API.
@@ -45,50 +41,6 @@ func GetDataFromAronaAI(seasonString string) (*types.AronaAIData, error) {
 	}
 
 	return &jsonData, nil
-}
-
-// Get rank data CSV from Google API.
-func GetRankCSVFromGoogleAPI(seasonString string) (*csv.Reader, error) {
-	season, category, err := logic.SplitSeasonString(seasonString)
-	if err != nil {
-		return nil, common.WrapErrorWithContext("GetRankCSVFromGoogleAPI", err)
-	}
-
-	var url string
-	if category == 0 {
-		url = googleAPIURL + "RaidRankData/" + season + "/FullData_Original.csv"
-	} else {
-		url = googleAPIURL + "RaidRankDataER/" + season + "/FullData_Original.csv"
-	}
-
-	reader, err := common.GetCSVReaderFromURL(url)
-	if err != nil {
-		return nil, common.WrapErrorWithContext("GetRankCSVFromGoogleAPI", err)
-	}
-
-	return reader, nil
-}
-
-// Get party data CSV from Google API.
-func GetPartyCSVFromGoogleAPI(seasonString string) (*csv.Reader, error) {
-	season, category, err := logic.SplitSeasonString(seasonString)
-	if err != nil {
-		return nil, common.WrapErrorWithContext("GetPartyCSVFromGoogleAPI", err)
-	}
-
-	var url string
-	if category == 0 {
-		url = googleAPIURL + "RaidRankData/" + season + "/TeamDataDetail_Original.csv"
-	} else {
-		url = googleAPIURL + "RaidRankDataER/" + season + "/TeamDataDetailBoss" + strconv.Itoa(category) + "_Original.csv"
-	}
-
-	reader, err := common.GetCSVReaderFromURL(url)
-	if err != nil {
-		return nil, common.WrapErrorWithContext("GetPartyCSVFromGoogleAPI", err)
-	}
-
-	return reader, nil
 }
 
 // Get student data from SchaleDB.
