@@ -49,7 +49,7 @@ type StudentData struct {
 	// Equipment & Favor
 	Equipment []string `json:"Equipment"`
 	StarGrade int      `json:"StarGrade"`
-	IsLimited int      `json:"IsLimited"`
+	IsLimited []int    `json:"IsLimited"`
 
 	// Favor System
 	FavorStatType       []string `json:"FavorStatType"`
