@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS batorment_v2.students (
 );
 
 -- Indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_students_name ON batorment_v2.students(name);
-CREATE INDEX IF NOT EXISTS idx_students_details ON batorment_v2.students USING GIN (details);
+CREATE INDEX IF NOT EXISTS idx_students_name ON batorment_v2.students(name_ko);
+CREATE INDEX IF NOT EXISTS idx_students_name_ja ON batorment_v2.students(name_ja);
+CREATE INDEX IF NOT EXISTS idx_students_details ON batorment_v2.students USING GIN (detail);
 CREATE INDEX IF NOT EXISTS idx_videos_raid_id ON batorment_v2.videos(raid_id);
