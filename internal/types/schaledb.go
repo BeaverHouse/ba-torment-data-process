@@ -107,10 +107,10 @@ type SkillEffect struct {
 
 // HP-based damage modifier
 type HpRateDamageModifier struct {
-	MaxHpRate     int `json:"MaxHpRate"`
-	MinHpRate     int `json:"MinHpRate"`
-	MultiplierMax int `json:"MultiplierMax"`
-	MultiplierMin int `json:"MultiplierMin"`
+	MaxHpRate     int     `json:"MaxHpRate"`
+	MinHpRate     int     `json:"MinHpRate"`
+	MultiplierMax float64 `json:"MultiplierMax"`
+	MultiplierMin float64 `json:"MultiplierMin"`
 }
 
 // Student weapon
