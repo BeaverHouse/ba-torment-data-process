@@ -5,21 +5,22 @@ import (
 	"time"
 )
 
+type BATormentFilter struct {
+	Filters       map[string](map[string]int) `json:"filters"`
+	AssistFilters map[string](map[string]int) `json:"assist_filters"`
+}
+
 type BATormentPartyData struct {
-	Filters       map[string][]int       `json:"filters"`
-	AssistFilters map[string][]int       `json:"assist_filters"`
-	MinPartys     int                    `json:"min_partys"`
-	MaxPartys     int                    `json:"max_partys"`
-	PartyDetail   []BATormentPartyDetail `json:"parties"`
+	MinPartys   int                    `json:"min_partys"`
+	MaxPartys   int                    `json:"max_partys"`
+	PartyDetail []BATormentPartyDetail `json:"parties"`
 }
 
 type BATormentPartyDetail struct {
-	FinalRank   int              `json:"FINAL_RANK"`
-	TormentRank int              `json:"TORMENT_RANK"`
-	Score       int              `json:"SCORE"`
-	UserID      int              `json:"USER_ID"`
-	Level       string           `json:"LEVEL"`
-	PartyData   map[string][]int `json:"PARTY_DATA"`
+	FinalRank   int     `json:"FINAL_RANK"`
+	TormentRank int     `json:"TORMENT_RANK"`
+	Score       int     `json:"SCORE"`
+	PartyData   [][]int `json:"PARTY_DATA"`
 }
 
 type BATormentSummaryData struct {
@@ -28,11 +29,9 @@ type BATormentSummaryData struct {
 }
 
 type BATormentLevelData struct {
-	ClearCount    int              `json:"clear_count"`
-	PartyCounts   map[string][]int `json:"party_counts"`
-	Filters       map[string][]int `json:"filters"`
-	AssistFilters map[string][]int `json:"assist_filters"`
-	Top5Partys    [][]interface{}  `json:"top5_partys"`
+	ClearCount  int              `json:"clear_count"`
+	PartyCounts map[string][]int `json:"party_counts"`
+	Top5Partys  [][]any          `json:"top5_partys"`
 }
 
 // *******************************
