@@ -30,13 +30,14 @@ func UpdateData() {
 		var summaryData *types.BATormentSummaryData
 
 		// Get from Arona AI
-		partyData, err = parse.ParsePartyDataFromAronaAI(raid.RaidID)
+		partyData, filterResult, err := parse.ParsePartyDataFromAronaAI(raid.RaidID)
 
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
 		data.UploadPartyDataJSON(partyData, raid.RaidID, false)
+		data.UploadFilterResultJSON(filterResult, raid.RaidID, false)
 
 		summaryData, err = parse.ProcessPartyDataToSummaryData(partyData)
 		if err != nil {

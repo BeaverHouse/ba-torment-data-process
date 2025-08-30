@@ -17,10 +17,10 @@ type BATormentPartyData struct {
 }
 
 type BATormentPartyDetail struct {
-	FinalRank   int     `json:"FINAL_RANK"`
-	TormentRank int     `json:"TORMENT_RANK"`
-	Score       int     `json:"SCORE"`
-	PartyData   [][]int `json:"PARTY_DATA"`
+	FinalRank   int      `json:"FINAL_RANK"`
+	TormentRank int      `json:"TORMENT_RANK"`
+	Score       int      `json:"SCORE"`
+	PartyData   [][6]int `json:"PARTY_DATA"`
 }
 
 type BATormentSummaryData struct {

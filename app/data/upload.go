@@ -108,3 +108,22 @@ func UploadSummaryDataJSON(data *types.BATormentSummaryData, seasonString string
 
 	return nil
 }
+
+func UploadFilterResultJSON(data *types.BATormentFilter, seasonString string, isTest bool) error {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return common.WrapErrorWithContext("UploadFilterResultJSON > json.Marshal", err)
+	}
+
+	path := "v2/filter"
+	if isTest {
+		path = "test/filter"
+	}
+
+	err = uploadFile(path, seasonString+".json", jsonData)
+	if err != nil {
+		return common.WrapErrorWithContext("UploadFilterResultJSON", err)
+	}
+
+	return nil
+}
