@@ -63,10 +63,9 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 		}
 
 		partyInfo := types.BATormentPartyDetail{
-			FinalRank:   rank,
-			Score:       score,
-			PartyData:   partyData,
-			TormentRank: rank,
+			Rank:      rank,
+			Score:     score,
+			PartyData: partyData,
 		}
 		parties = append(parties, partyInfo)
 	}

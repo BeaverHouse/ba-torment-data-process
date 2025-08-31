@@ -126,7 +126,7 @@ func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCo
 		partyCounts := make([]int, 4)
 		for i := range data {
 			entry := data[i]
-			rank := entry.TormentRank
+			rank := entry.Rank
 			if rank > threshold {
 				continue
 			}
