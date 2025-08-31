@@ -2,10 +2,8 @@ package data
 
 import (
 	"ba-torment-data-process/app/common"
-	"ba-torment-data-process/app/types"
 	"ba-torment-data-process/internal/logic"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -29,12 +27,12 @@ func init() {
 }
 
 // Uploads a file to the Oracle Object Storage.
-func uploadFile(path string, fileName string, data []byte, dryRun bool) error {
+func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 	if dryRun {
 		// Create directory if it doesn't exist
-		os.MkdirAll(filepath.Join("files"+path), 0755)
+		os.MkdirAll(filepath.Join("files", path), 0755)
 		// Save to JSON
-		return os.WriteFile(filepath.Join("files"+path, fileName), data, 0644)
+		return os.WriteFile(filepath.Join("files", path, fileName), data, 0644)
 	} else {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
@@ -89,68 +87,9 @@ func UploadCharacterImage(id int, isTest bool, dryRun bool) error {
 		path = "test/character"
 	}
 
-	err = uploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
+	err = UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadCharacterImage", err)
-	}
-
-	return nil
-}
-
-// Uploads the party data JSON to the Oracle Object Storage.
-func UploadPartyDataJSON(data *types.BATormentPartyData, seasonString string, isTest bool, dryRun bool) error {
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadPartyDataJSON > json.Marshal", err)
-	}
-
-	path := "v2/party"
-	if isTest {
-		path = "test/party"
-	}
-
-	err = uploadFile(path, seasonString+".json", jsonData, dryRun)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadPartyDataJSON", err)
-	}
-
-	return nil
-}
-
-// Uploads the summary data JSON to the Oracle Object Storage.
-func UploadSummaryDataJSON(data *types.BATormentSummaryData, seasonString string, isTest bool, dryRun bool) error {
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadSummaryDataJSON > json.Marshal", err)
-	}
-
-	path := "v2/summary"
-	if isTest {
-		path = "test/summary"
-	}
-
-	err = uploadFile(path, seasonString+".json", jsonData, dryRun)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadSummaryDataJSON", err)
-	}
-
-	return nil
-}
-
-func UploadFilterResultJSON(data *types.BATormentFilter, seasonString string, isTest bool, dryRun bool) error {
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadFilterResultJSON > json.Marshal", err)
-	}
-
-	path := "v2/filter"
-	if isTest {
-		path = "test/filter"
-	}
-
-	err = uploadFile(path, seasonString+".json", jsonData, dryRun)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadFilterResultJSON", err)
 	}
 
 	return nil

@@ -6,6 +6,8 @@ import (
 	"ba-torment-data-process/app/database"
 	"ba-torment-data-process/app/parse"
 	"ba-torment-data-process/app/types"
+	"encoding/json"
+	"fmt"
 
 	"go.uber.org/zap"
 )
@@ -45,15 +47,30 @@ func UpdateData() {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadPartyDataJSON(partyData, raid.RaidID, false, dryRun)
-		data.UploadFilterResultJSON(filterResult, raid.RaidID, false, dryRun)
+		partyDataBytes, err := json.Marshal(partyData)
+		if err != nil {
+			common.LogError(common.WrapErrorWithContext("UpdateData", err))
+			continue
+		}
+		filterResultBytes, err := json.Marshal(filterResult)
+		if err != nil {
+			common.LogError(common.WrapErrorWithContext("UpdateData", err))
+			continue
+		}
+		data.UploadFile("v2/party", fmt.Sprintf("%s.json", raid.RaidID), partyDataBytes, dryRun)
+		data.UploadFile("v2/filter", fmt.Sprintf("%s.json", raid.RaidID), filterResultBytes, dryRun)
 
 		summaryData, err = parse.ProcessPartyDataToSummaryData(partyData)
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadSummaryDataJSON(summaryData, raid.RaidID, false, dryRun)
+		summaryDataBytes, err := json.Marshal(summaryData)
+		if err != nil {
+			common.LogError(common.WrapErrorWithContext("UpdateData", err))
+			continue
+		}
+		data.UploadFile("v2/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
 
 		err = database.UpdateRaidStatusToComplete(raid.RaidID)
 		if err != nil {
