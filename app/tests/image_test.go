@@ -15,7 +15,7 @@ func TestUploadCharacterImage(t *testing.T) {
 	common.InitLogger()
 
 	// Upload test image
-	if err := data.UploadCharacterImage(testID, true); err != nil {
+	if err := data.UploadCharacterImage(testID, true, false); err != nil {
 		t.Errorf("failed to upload test image: %v", err)
 		return
 	}

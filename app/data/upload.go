@@ -3,53 +3,81 @@ package data
 import (
 	"ba-torment-data-process/app/common"
 	"ba-torment-data-process/app/types"
+	"ba-torment-data-process/internal/logic"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"go.uber.org/zap"
 )
 
 var (
-	oracleUploadURL string
-	// SchaleDB URL is already declared
+	fileUploadURL string
+	adminAPIKey   string
 )
 
 func init() {
 	common.LoadEnv()
-	oracleUploadURL = common.GetEssentialEnv("BATORMENT_UPLOAD_URL")
+	fileUploadURL = "https://api.tinyclover.com/file-manager/v1"
+	adminAPIKey = logic.GetEnv("ADMIN_API_KEY", "")
 }
 
 // Uploads a file to the Oracle Object Storage.
-func uploadFile(path string, fileName string, data []byte) error {
-	req, err := http.NewRequest(http.MethodPut,
-		fmt.Sprintf("%s/o/batorment/%s/%s", oracleUploadURL, path, fileName),
-		bytes.NewReader(data))
-	if err != nil {
-		return common.WrapErrorWithContext("UploadFile", err)
+func uploadFile(path string, fileName string, data []byte, dryRun bool) error {
+	if dryRun {
+		// Create directory if it doesn't exist
+		os.MkdirAll(filepath.Join("files"+path), 0755)
+		// Save to JSON
+		return os.WriteFile(filepath.Join("files"+path, fileName), data, 0644)
+	} else {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		defer writer.Close()
+
+		part, err := writer.CreateFormFile("file", filepath.Join(path, fileName))
+		if err != nil {
+			return common.WrapErrorWithContext("UploadFile", err)
+		}
+		if _, err := io.Copy(part, bytes.NewReader(data)); err != nil {
+			return common.WrapErrorWithContext("UploadFile", err)
+		}
+
+		req, err := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("%s/files/upload", fileUploadURL),
+			body)
+		if err != nil {
+			return common.WrapErrorWithContext("UploadFile", err)
+		}
+
+		req.Header.Set("X-API-Key", adminAPIKey)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return common.WrapErrorWithContext("UploadFile", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			return common.WrapErrorWithContext("UploadFile", fmt.Errorf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body)))
+		}
+
+		common.LogInfo("File uploaded", zap.String("path", path), zap.String("fileName", fileName))
+		return nil
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadFile", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return common.WrapErrorWithContext("UploadFile", fmt.Errorf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body)))
-	}
-
-	common.LogInfo("File uploaded", zap.String("path", path), zap.String("fileName", fileName))
-	return nil
 }
 
 // Uploads the character image from SchaleDB to the Oracle Object Storage.
-func UploadCharacterImage(id int, isTest bool) error {
+func UploadCharacterImage(id int, isTest bool, dryRun bool) error {
 
 	imgBytes, err := common.GetDataFromURL(schaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
 	if err != nil {
@@ -61,7 +89,7 @@ func UploadCharacterImage(id int, isTest bool) error {
 		path = "test/character"
 	}
 
-	err = uploadFile(path, strconv.Itoa(id)+".webp", imgBytes)
+	err = uploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadCharacterImage", err)
 	}
@@ -70,7 +98,7 @@ func UploadCharacterImage(id int, isTest bool) error {
 }
 
 // Uploads the party data JSON to the Oracle Object Storage.
-func UploadPartyDataJSON(data *types.BATormentPartyData, seasonString string, isTest bool) error {
+func UploadPartyDataJSON(data *types.BATormentPartyData, seasonString string, isTest bool, dryRun bool) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadPartyDataJSON > json.Marshal", err)
@@ -81,7 +109,7 @@ func UploadPartyDataJSON(data *types.BATormentPartyData, seasonString string, is
 		path = "test/party"
 	}
 
-	err = uploadFile(path, seasonString+".json", jsonData)
+	err = uploadFile(path, seasonString+".json", jsonData, dryRun)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadPartyDataJSON", err)
 	}
@@ -90,7 +118,7 @@ func UploadPartyDataJSON(data *types.BATormentPartyData, seasonString string, is
 }
 
 // Uploads the summary data JSON to the Oracle Object Storage.
-func UploadSummaryDataJSON(data *types.BATormentSummaryData, seasonString string, isTest bool) error {
+func UploadSummaryDataJSON(data *types.BATormentSummaryData, seasonString string, isTest bool, dryRun bool) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadSummaryDataJSON > json.Marshal", err)
@@ -101,7 +129,7 @@ func UploadSummaryDataJSON(data *types.BATormentSummaryData, seasonString string
 		path = "test/summary"
 	}
 
-	err = uploadFile(path, seasonString+".json", jsonData)
+	err = uploadFile(path, seasonString+".json", jsonData, dryRun)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadSummaryDataJSON", err)
 	}
@@ -109,7 +137,7 @@ func UploadSummaryDataJSON(data *types.BATormentSummaryData, seasonString string
 	return nil
 }
 
-func UploadFilterResultJSON(data *types.BATormentFilter, seasonString string, isTest bool) error {
+func UploadFilterResultJSON(data *types.BATormentFilter, seasonString string, isTest bool, dryRun bool) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadFilterResultJSON > json.Marshal", err)
@@ -120,7 +148,7 @@ func UploadFilterResultJSON(data *types.BATormentFilter, seasonString string, is
 		path = "test/filter"
 	}
 
-	err = uploadFile(path, seasonString+".json", jsonData)
+	err = uploadFile(path, seasonString+".json", jsonData, dryRun)
 	if err != nil {
 		return common.WrapErrorWithContext("UploadFilterResultJSON", err)
 	}

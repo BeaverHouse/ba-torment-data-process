@@ -45,7 +45,7 @@ func UpdateStudentInfo() error {
 			return common.WrapErrorWithContext("UpdateStudentInfo", err)
 		}
 
-		if err := data.UploadCharacterImage(student.ID, false); err != nil {
+		if err := data.UploadCharacterImage(student.ID, false, false); err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateStudentInfo", err))
 			continue
 		}

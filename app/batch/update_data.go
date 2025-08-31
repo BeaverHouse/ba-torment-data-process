@@ -15,10 +15,19 @@ func UpdateData() {
 		common.LogInfo("총력전 데이터 업데이트 프로세스 완료")
 	}()
 
-	pendingRaids, err := database.GetPendingRaids()
-	if err != nil {
-		common.ExitIfError(common.WrapErrorWithContext("UpdateData", err))
+	dryRun := true
+	pendingRaids := []types.Raid{
+		{
+			RaidID: "S80-0",
+			Name:   "테스트용",
+			Status: "PENDING",
+		},
 	}
+
+	// pendingRaids, err := database.GetPendingRaids()
+	// if err != nil {
+	// 	common.ExitIfError(common.WrapErrorWithContext("UpdateData", err))
+	// }
 
 	if len(pendingRaids) == 0 {
 		common.LogInfo("업데이트할 총력전 ID가 없습니다.")
@@ -36,15 +45,15 @@ func UpdateData() {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadPartyDataJSON(partyData, raid.RaidID, false)
-		data.UploadFilterResultJSON(filterResult, raid.RaidID, false)
+		data.UploadPartyDataJSON(partyData, raid.RaidID, false, dryRun)
+		data.UploadFilterResultJSON(filterResult, raid.RaidID, false, dryRun)
 
 		summaryData, err = parse.ProcessPartyDataToSummaryData(partyData)
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadSummaryDataJSON(summaryData, raid.RaidID, false)
+		data.UploadSummaryDataJSON(summaryData, raid.RaidID, false, dryRun)
 
 		err = database.UpdateRaidStatusToComplete(raid.RaidID)
 		if err != nil {
