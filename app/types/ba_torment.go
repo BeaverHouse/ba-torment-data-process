@@ -7,20 +7,19 @@ import (
 
 type BATormentFilter struct {
 	Filters       map[string](map[string]int) `json:"filters"`
-	AssistFilters map[string](map[string]int) `json:"assist_filters"`
+	AssistFilters map[string](map[string]int) `json:"assistFilters"`
 }
 
 type BATormentPartyData struct {
-	MinPartys   int                    `json:"min_partys"`
-	MaxPartys   int                    `json:"max_partys"`
+	MinPartys   int                    `json:"minPartys"`
+	MaxPartys   int                    `json:"maxPartys"`
 	PartyDetail []BATormentPartyDetail `json:"parties"`
 }
 
 type BATormentPartyDetail struct {
-	FinalRank   int      `json:"FINAL_RANK"`
-	TormentRank int      `json:"TORMENT_RANK"`
-	Score       int      `json:"SCORE"`
-	PartyData   [][6]int `json:"PARTY_DATA"`
+	Rank      int      `json:"rank"`
+	Score     int      `json:"score"`
+	PartyData [][6]int `json:"partyData"`
 }
 
 type BATormentSummaryData struct {
@@ -29,9 +28,9 @@ type BATormentSummaryData struct {
 }
 
 type BATormentLevelData struct {
-	ClearCount  int              `json:"clear_count"`
-	PartyCounts map[string][]int `json:"party_counts"`
-	Top5Partys  [][]any          `json:"top5_partys"`
+	ClearCount  int              `json:"clearCount"`
+	PartyCounts map[string][]int `json:"partyCounts"`
+	Top5Partys  [][]any          `json:"top5Partys"`
 }
 
 // *******************************
