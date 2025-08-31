@@ -57,8 +57,8 @@ func UpdateData() {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadFile("v2/party", fmt.Sprintf("%s.json", raid.RaidID), partyDataBytes, dryRun)
-		data.UploadFile("v2/filter", fmt.Sprintf("%s.json", raid.RaidID), filterResultBytes, dryRun)
+		data.UploadFile("v3/party", fmt.Sprintf("%s.json", raid.RaidID), partyDataBytes, dryRun)
+		data.UploadFile("v3/filter", fmt.Sprintf("%s.json", raid.RaidID), filterResultBytes, dryRun)
 
 		summaryData, err = parse.ProcessPartyDataToSummaryData(partyData)
 		if err != nil {
@@ -70,7 +70,7 @@ func UpdateData() {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadFile("v2/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
+		data.UploadFile("v3/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
 
 		err = database.UpdateRaidStatusToComplete(raid.RaidID)
 		if err != nil {

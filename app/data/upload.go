@@ -38,7 +38,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		writer := multipart.NewWriter(body)
 		defer writer.Close()
 
-		part, err := writer.CreateFormFile("file", filepath.Join(path, fileName))
+		part, err := writer.CreateFormFile("file", filepath.Join("ba-torment", path, fileName))
 		if err != nil {
 			return common.WrapErrorWithContext("UploadFile", err)
 		}
