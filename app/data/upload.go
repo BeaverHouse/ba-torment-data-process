@@ -36,15 +36,16 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 	} else {
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
-		defer writer.Close()
 
-		part, err := writer.CreateFormFile("file", filepath.Join("ba-torment", path, fileName))
+		part, err := writer.CreateFormFile("file", fileName)
 		if err != nil {
 			return common.WrapErrorWithContext("UploadFile", err)
 		}
 		if _, err := io.Copy(part, bytes.NewReader(data)); err != nil {
 			return common.WrapErrorWithContext("UploadFile", err)
 		}
+		writer.WriteField("upload_path", path)
+		writer.Close()
 
 		req, err := http.NewRequest(http.MethodPost,
 			fmt.Sprintf("%s/files/upload", fileUploadURL),
@@ -71,7 +72,6 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		common.LogInfo("File uploaded", zap.String("path", path), zap.String("fileName", fileName))
 		return nil
 	}
-
 }
 
 // Uploads the character image from SchaleDB to the Oracle Object Storage.
