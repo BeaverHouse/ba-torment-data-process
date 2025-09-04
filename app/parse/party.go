@@ -25,6 +25,9 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 	assistFilters := make(map[string](map[string]int))
 	var parties []types.BATormentPartyDetail
 
+	minPartys := 99
+	maxPartys := 0
+
 	for _, rankData := range aronaAIData.D {
 		rank := rankData.R
 		score := rankData.S
@@ -68,6 +71,13 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 			PartyData: partyData,
 		}
 		parties = append(parties, partyInfo)
+
+		if len(partyData) < minPartys {
+			minPartys = len(partyData)
+		}
+		if len(partyData) > maxPartys {
+			maxPartys = len(partyData)
+		}
 	}
 
 	filterResult := types.BATormentFilter{
@@ -77,8 +87,8 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 
 	// 최종 데이터 구성
 	result := types.BATormentPartyData{
-		MinPartys:   1,
-		MaxPartys:   15,
+		MinPartys:   minPartys,
+		MaxPartys:   maxPartys,
 		PartyDetail: parties,
 	}
 
