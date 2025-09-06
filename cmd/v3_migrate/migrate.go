@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -182,7 +183,7 @@ func migratePartyFile(oldPath, newPath string) error {
 
 	// Write filter file
 	filterPath := strings.Replace(newPath, "/party/", "/filter/", 1)
-	filterData, err := json.MarshalIndent(filterFile, "", "  ")
+	filterData, err := json.Marshal(filterFile) // Use compact JSON first
 	if err != nil {
 		return fmt.Errorf("failed to marshal filter file: %v", err)
 	}
@@ -196,6 +197,8 @@ func migratePartyFile(oldPath, newPath string) error {
 	if err := ioutil.WriteFile(filterPath, filterData, 0644); err != nil {
 		return fmt.Errorf("failed to write filter file: %v", err)
 	}
+
+	log.Printf("Created filter file: %s (run prettier to format)", filterPath)
 
 	return nil
 }
@@ -311,4 +314,14 @@ func main() {
 	}
 
 	log.Println("Migration completed successfully!")
+
+	// Run prettier on generated JSON files
+	log.Println("Running prettier to format generated JSON files...")
+	cmd := exec.Command("npx", "prettier", "--write", filepath.Join(newDir, "**/*.json"))
+	if err := cmd.Run(); err != nil {
+		log.Printf("Warning: Failed to run prettier: %v", err)
+		log.Printf("You can manually run: npx prettier --write %s/**/*.json", newDir)
+	} else {
+		log.Println("Prettier formatting completed!")
+	}
 }
