@@ -1,6 +1,8 @@
 package main
 
 import (
+	"ba-torment-data-process/app/common"
+	"ba-torment-data-process/app/data"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -297,31 +299,165 @@ func processFiles(oldDir, newDir string) error {
 	return nil
 }
 
+func downloadAndUploadSeason(season string, dryRun bool) error {
+	// URLs for the season files
+	summaryURL := fmt.Sprintf("https://objectstorage.ap-chuncheon-1.oraclecloud.com/p/wY1_nvEFKH6vubbNiE6XiFTFqFCLugHoRIsTlURURX1Hw2YpGKaK0gMxPQGrl5tr/n/axpzmkynkrby/b/austin-oracle-bucket/o/batorment/v2/summary/%s.json", season)
+	partyURL := fmt.Sprintf("https://objectstorage.ap-chuncheon-1.oraclecloud.com/p/wY1_nvEFKH6vubbNiE6XiFTFqFCLugHoRIsTlURURX1Hw2YpGKaK0gMxPQGrl5tr/n/axpzmkynkrby/b/austin-oracle-bucket/o/batorment/v2/party/%s.json", season)
+
+	// Download summary file
+	log.Printf("Downloading summary file for season %s...", season)
+	summaryData, err := common.GetDataFromURL(summaryURL)
+	if err != nil {
+		return fmt.Errorf("failed to download summary file: %v", err)
+	}
+
+	// Download party file
+	log.Printf("Downloading party file for season %s...", season)
+	partyData, err := common.GetDataFromURL(partyURL)
+	if err != nil {
+		return fmt.Errorf("failed to download party file: %v", err)
+	}
+
+	// Convert old format to new format
+	// Process party file
+	var oldPartyFile OldPartyFile
+	if err := json.Unmarshal(partyData, &oldPartyFile); err != nil {
+		return fmt.Errorf("failed to unmarshal party file: %v", err)
+	}
+
+	parties, minPartys, maxPartys := convertPartyData(oldPartyFile.Parties)
+	newPartyFile := NewPartyFile{
+		MinPartys: minPartys,
+		MaxPartys: maxPartys,
+		Parties:   parties,
+	}
+
+	// Create filter file
+	filterFile := NewFilterFile{
+		Filters:       make(map[string]map[string]int),
+		AssistFilters: make(map[string]map[string]int),
+	}
+
+	for key, arr := range oldPartyFile.Filters {
+		filterFile.Filters[key] = convertArrayToMap(arr)
+	}
+
+	for key, arr := range oldPartyFile.AssistFilters {
+		filterFile.AssistFilters[key] = convertArrayToMap(arr)
+	}
+
+	// Process summary file
+	var oldSummaryFile OldSummaryFile
+	if err := json.Unmarshal(summaryData, &oldSummaryFile); err != nil {
+		return fmt.Errorf("failed to unmarshal summary file: %v", err)
+	}
+
+	newSummaryFile := NewSummaryFile{
+		Torment: NewSummaryTorment{
+			ClearCount:  oldSummaryFile.Torment.ClearCount,
+			PartyCounts: oldSummaryFile.Torment.PartyCounts,
+			Top5Partys:  oldSummaryFile.Torment.Top5Partys,
+		},
+		Lunatic: NewSummaryLunatic{
+			ClearCount:  oldSummaryFile.Lunatic.ClearCount,
+			PartyCounts: oldSummaryFile.Lunatic.PartyCounts,
+			Top5Partys:  oldSummaryFile.Lunatic.Top5Partys,
+		},
+	}
+
+	// Convert to JSON
+	newPartyData, err := json.MarshalIndent(newPartyFile, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal party file: %v", err)
+	}
+
+	filterData, err := json.Marshal(filterFile)
+	if err != nil {
+		return fmt.Errorf("failed to marshal filter file: %v", err)
+	}
+
+	newSummaryData, err := json.MarshalIndent(newSummaryFile, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal summary file: %v", err)
+	}
+
+	// Upload to S3
+	log.Printf("Uploading files for season %s...", season)
+	fileName := fmt.Sprintf("%s.json", season)
+
+	// Upload party file
+	if err := data.UploadFile("v3/party", fileName, newPartyData, dryRun); err != nil {
+		return fmt.Errorf("failed to upload party file: %v", err)
+	}
+
+	// Upload filter file
+	if err := data.UploadFile("v3/filter", fileName, filterData, dryRun); err != nil {
+		return fmt.Errorf("failed to upload filter file: %v", err)
+	}
+
+	// Upload summary file
+	if err := data.UploadFile("v3/summary", fileName, newSummaryData, dryRun); err != nil {
+		return fmt.Errorf("failed to upload summary file: %v", err)
+	}
+
+	log.Printf("Successfully processed season %s", season)
+	return nil
+}
+
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("Usage: go run migrate.go <old_files_dir> <new_files_dir>")
-		fmt.Println("Example: go run cmd/v3_migrate/migrate.go files/old files/v3")
+	// Initialize logger
+	common.InitLogger()
+	
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: go run migrate.go <seasons...> [--dry-run]")
+		fmt.Println("Example: go run cmd/v3_migrate/migrate.go S80-0 S80-1 --dry-run")
+		fmt.Println("Example: go run cmd/v3_migrate/migrate.go S80-0")
 		os.Exit(1)
 	}
 
-	oldDir := os.Args[1]
-	newDir := os.Args[2]
+	// Parse arguments
+	var seasons []string
+	dryRun := false
 
-	log.Printf("Starting migration from %s to %s", oldDir, newDir)
+	for _, arg := range os.Args[1:] {
+		if arg == "--dry-run" {
+			dryRun = true
+		} else {
+			seasons = append(seasons, arg)
+		}
+	}
 
-	if err := processFiles(oldDir, newDir); err != nil {
-		log.Fatalf("Migration failed: %v", err)
+	if len(seasons) == 0 {
+		fmt.Println("Error: No seasons specified")
+		os.Exit(1)
+	}
+
+	if dryRun {
+		log.Printf("Running in dry-run mode (files will be saved locally)")
+	} else {
+		log.Printf("Running in upload mode (files will be uploaded to S3)")
+	}
+
+	log.Printf("Processing seasons: %v", seasons)
+
+	// Process each season
+	for _, season := range seasons {
+		if err := downloadAndUploadSeason(season, dryRun); err != nil {
+			log.Fatalf("Failed to process season %s: %v", season, err)
+		}
 	}
 
 	log.Println("Migration completed successfully!")
 
-	// Run prettier on generated JSON files
-	log.Println("Running prettier to format generated JSON files...")
-	cmd := exec.Command("npx", "prettier", "--write", filepath.Join(newDir, "**/*.json"))
-	if err := cmd.Run(); err != nil {
-		log.Printf("Warning: Failed to run prettier: %v", err)
-		log.Printf("You can manually run: npx prettier --write %s/**/*.json", newDir)
-	} else {
-		log.Println("Prettier formatting completed!")
+	if dryRun {
+		// Run prettier on generated JSON files
+		log.Println("Running prettier to format generated JSON files...")
+		cmd := exec.Command("npx", "prettier", "--write", "files/**/*.json")
+		if err := cmd.Run(); err != nil {
+			log.Printf("Warning: Failed to run prettier: %v", err)
+			log.Printf("You can manually run: npx prettier --write files/**/*.json")
+		} else {
+			log.Println("Prettier formatting completed!")
+		}
 	}
 }
