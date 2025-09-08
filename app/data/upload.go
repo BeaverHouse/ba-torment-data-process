@@ -82,10 +82,7 @@ func UploadCharacterImage(id int, isTest bool, dryRun bool) error {
 		return common.WrapErrorWithContext("UploadCharacterImage", err)
 	}
 
-	path := "character"
-	if isTest {
-		path = "test/character"
-	}
+	path := "batorment/character"
 
 	err = UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
 	if err != nil {
