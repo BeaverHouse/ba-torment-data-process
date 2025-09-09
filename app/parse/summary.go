@@ -3,6 +3,7 @@ package parse
 import (
 	"ba-torment-data-process/app/logic"
 	"ba-torment-data-process/app/types"
+	"ba-torment-data-process/internal/constants"
 	"fmt"
 	"sort"
 	"strconv"
@@ -13,9 +14,9 @@ func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.
 	// 토먼트/루나틱 데이터 분리
 	var lunaticData, tormentData []types.BATormentPartyDetail
 	for _, data := range partyData.PartyDetail {
-		if data.Level == "L" {
+		if data.Score >= constants.LunaticMinScore {
 			lunaticData = append(lunaticData, data)
-		} else if data.Level == "T" || data.Level == "I" {
+		} else {
 			tormentData = append(tormentData, data)
 		}
 	}
@@ -36,33 +37,28 @@ func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.
 func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCount, tormentCount int) types.BATormentLevelData {
 	if len(data) == 0 {
 		return types.BATormentLevelData{
-			ClearCount:    len(data),
-			PartyCounts:   make(map[string][]int),
-			Filters:       make(map[string][]int),
-			AssistFilters: make(map[string][]int),
-			Top5Partys:    make([][]interface{}, 0),
+			ClearCount:  len(data),
+			PartyCounts: make(map[string][]int),
+			Top5Partys:  make([][]interface{}, 0),
 		}
 	}
 
 	result := types.BATormentLevelData{
-		ClearCount:    len(data),
-		PartyCounts:   make(map[string][]int),
-		Filters:       make(map[string][]int),
-		AssistFilters: make(map[string][]int),
-		Top5Partys:    make([][]interface{}, 0),
+		ClearCount:  len(data),
+		PartyCounts: make(map[string][]int),
+		Top5Partys:  make([][]interface{}, 0),
 	}
 
 	parties := make([]string, 0)
 
 	// 필터 데이터 처리
-	filters := make(map[string][]int)
-	assistFilters := make(map[string][]int)
-	totalCount := len(data)
+	filters := make(map[string](map[string]int))
+	assistFilters := make(map[string](map[string]int))
 
 	for _, entry := range data {
 		var partyKeys []string
 		for i := range len(entry.PartyData) {
-			members := entry.PartyData["party_"+strconv.Itoa(i+1)]
+			members := entry.PartyData[i]
 			var charIDs []string
 			for _, member := range members {
 
@@ -82,13 +78,6 @@ func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCo
 		key := strings.Join(partyKeys, "_")
 		parties = append(parties, key)
 	}
-
-	// 1% 미만 사용률 필터 제거
-	logic.DropLowUsageFilters(filters, totalCount)
-	logic.DropLowUsageFilters(assistFilters, totalCount)
-
-	result.Filters = filters
-	result.AssistFilters = assistFilters
 
 	// 파티 목록을 정렬
 	sort.Strings(parties)
@@ -123,7 +112,7 @@ func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCo
 	})
 	// Top 5 파티 추출
 	for i := 0; i < 5 && i < len(usages); i++ {
-		party := []interface{}{
+		party := []any{
 			usages[i].key,
 			usages[i].count,
 		}
@@ -137,7 +126,7 @@ func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCo
 		partyCounts := make([]int, 4)
 		for i := range data {
 			entry := data[i]
-			rank := entry.TormentRank
+			rank := entry.Rank
 			if rank > threshold {
 				continue
 			}

@@ -11,28 +11,31 @@ import (
 )
 
 // Parse Arona AI data into BA Torment website's party data format.
-func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, error) {
+func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, *types.BATormentFilter, error) {
 
 	var aronaAIData *types.AronaAIData
 	fileName := fmt.Sprintf("data/%s.json", seasonString)
 	jsonBytes, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, common.WrapErrorWithContext("ParsePartyDataFromAronaAI", err)
+		return nil, nil, common.WrapErrorWithContext("ParsePartyDataFromAronaAI", err)
 	}
 	json.Unmarshal(jsonBytes, &aronaAIData)
 
-	filters := make(map[string][]int)
-	assistFilters := make(map[string][]int)
+	filters := make(map[string](map[string]int))
+	assistFilters := make(map[string](map[string]int))
 	var parties []types.BATormentPartyDetail
 
-	for idx, rankData := range aronaAIData.D {
+	minPartys := 99
+	maxPartys := 0
+
+	for _, rankData := range aronaAIData.D {
 		rank := rankData.R
 		score := rankData.S
 
-		partyData := make(map[string][]int)
+		partyData := make([][6]int, len(rankData.T))
 
 		for i, party := range rankData.T {
-			partyMembers := make([]int, 6)
+			partyMembers := [6]int{}
 
 			for memberIdx := range 6 {
 				var char types.AronaAICharacter
@@ -59,30 +62,35 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 				logic.UpdatePartyFilters(filters, assistFilters, studentDetailID)
 			}
 
-			partyData[fmt.Sprintf("party_%d", i+1)] = partyMembers
+			partyData[i] = partyMembers
 		}
-
-		level := logic.GetLevelFromScore(score)
 
 		partyInfo := types.BATormentPartyDetail{
-			FinalRank:   rank,
-			Score:       score,
-			UserID:      -(idx + 1),
-			Level:       level,
-			PartyData:   partyData,
-			TormentRank: rank,
+			Rank:      rank,
+			Score:     score,
+			PartyData: partyData,
 		}
 		parties = append(parties, partyInfo)
+
+		if len(partyData) < minPartys {
+			minPartys = len(partyData)
+		}
+		if len(partyData) > maxPartys {
+			maxPartys = len(partyData)
+		}
+	}
+
+	filterResult := types.BATormentFilter{
+		Filters:       filters,
+		AssistFilters: assistFilters,
 	}
 
 	// 최종 데이터 구성
 	result := types.BATormentPartyData{
-		Filters:       filters,
-		AssistFilters: assistFilters,
-		MinPartys:     1,
-		MaxPartys:     15,
-		PartyDetail:   parties,
+		MinPartys:   minPartys,
+		MaxPartys:   maxPartys,
+		PartyDetail: parties,
 	}
 
-	return &result, nil
+	return &result, &filterResult, nil
 }

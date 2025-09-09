@@ -21,7 +21,7 @@ func TestAronaAIParsing(t *testing.T) {
 	baTormentPartyPath := filepath.Join(filesDir, season+"-ba-torment-party.json")
 	baTormentSummaryPath := filepath.Join(filesDir, season+"-ba-torment-summary.json")
 
-	parsedPartyData, err := parse.ParsePartyDataFromAronaAI(seasonString)
+	parsedPartyData, _, err := parse.ParsePartyDataFromAronaAI(seasonString)
 	if err != nil {
 		t.Fatalf("파티 데이터 파싱 실패: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestAronaAIParsing(t *testing.T) {
 	}
 	os.WriteFile(filepath.Join(filesDir, season+"-parsed-party-data.json"), parsedPartyDataBytes, 0644)
 
-	ComparePartyData(t, parsedPartyData, &baTormentPartyData, true)
+	ComparePartyData(t, parsedPartyData, &baTormentPartyData)
 
 	parsedSummaryData, err := parse.ProcessPartyDataToSummaryData(parsedPartyData)
 	if err != nil {
