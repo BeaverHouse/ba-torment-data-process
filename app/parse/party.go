@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 
 	"ba-torment-data-process/app/common"
 	"ba-torment-data-process/app/logic"
@@ -28,8 +29,13 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 	minPartys := 99
 	maxPartys := 0
 
-	for _, rankData := range aronaAIData.D {
-		rank := rankData.R
+	// 점수 기준으로 내림차순 정렬 (높은 점수부터)
+	sort.Slice(aronaAIData.D, func(i, j int) bool {
+		return aronaAIData.D[i].S > aronaAIData.D[j].S
+	})
+
+	for i, rankData := range aronaAIData.D {
+		rank := i + 1 // 정렬된 순서대로 순위 부여 (1위부터)
 		score := rankData.S
 
 		partyData := make([][6]int, len(rankData.T))

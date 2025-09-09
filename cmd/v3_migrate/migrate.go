@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -108,9 +109,14 @@ func convertPartyData(oldParties []OldPartyData) ([]NewPartyData, int, int) {
 	minPartys := 99
 	maxPartys := 0
 
-	for _, party := range oldParties {
+	// 점수 기준으로 내림차순 정렬 (높은 점수부터)
+	sort.Slice(oldParties, func(i, j int) bool {
+		return oldParties[i].Score > oldParties[j].Score
+	})
+
+	for i, party := range oldParties {
 		newParty := NewPartyData{
-			Rank:      party.FinalRank,
+			Rank:      i + 1, // 정렬된 순서대로 순위 부여 (1위부터)
 			Score:     party.Score,
 			PartyData: make([][]int, 0),
 		}
