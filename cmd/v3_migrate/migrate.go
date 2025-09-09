@@ -434,44 +434,66 @@ func createLunaticFilter(oldPartyFile *OldPartyFile) NewFilterFile {
 	return filterFile
 }
 
-func updateFiltersFromStudentID(filters map[string]map[string]int, assistFilters map[string]map[string]int, studentDetailID int) {
-	// Extract student ID, star, weapon star, and assist info from the 8-digit ID
-	studentID := studentDetailID / 1000
-	remainder := studentDetailID % 1000
-	star := remainder / 100
-	remainder = remainder % 100
-	weaponStar := remainder / 10
-	isAssist := remainder % 10
-
-	// Convert to string key format
-	studentIDStr := fmt.Sprintf("%d", studentID)
-
-	// Determine star level string
-	var starLevel string
-	if weaponStar == 0 {
-		starLevel = fmt.Sprintf("%d0", star)
-	} else {
-		starLevel = fmt.Sprintf("5%d", weaponStar)
+func createNonLunaticFilter(oldPartyFile *OldPartyFile) NewFilterFile {
+	filterFile := NewFilterFile{
+		Filters:       make(map[string]map[string]int),
+		AssistFilters: make(map[string]map[string]int),
 	}
 
-	// Update appropriate filter map
-	if isAssist == 1 {
-		if assistFilters[studentIDStr] == nil {
-			assistFilters[studentIDStr] = make(map[string]int)
+	// Process only parties with score < LunaticMinScore
+	for _, party := range oldPartyFile.Parties {
+		if party.Score < constants.LunaticMinScore {
+			// Process each party's characters to build filter
+			for i := 1; ; i++ {
+				key := fmt.Sprintf("party_%d", i)
+				if partyData, exists := party.PartyData[key]; exists {
+					for _, studentDetailID := range partyData {
+						if studentDetailID != 0 {
+							// Extract character info and update filters
+							updateFiltersFromStudentID(filterFile.Filters, filterFile.AssistFilters, studentDetailID)
+						}
+					}
+				} else {
+					break
+				}
+			}
 		}
-		assistFilters[studentIDStr][starLevel]++
 	}
+
+	return filterFile
+}
+
+func updateFiltersFromStudentID(filters map[string]map[string]int, assistFilters map[string]map[string]int, studentDetailID int) {
+	// Use same logic as UpdateSummaryFilters: always update filters, and update assistFilters if assist
+	isAssist := studentDetailID%10 == 1
+	
+	// Extract student info using same logic as updateFilter
+	studentID := studentDetailID / 1000
+	starWeapon := (studentDetailID % 1000) / 10
+	
+	studentIDStr := fmt.Sprintf("%d", studentID)
+	starWeaponStr := fmt.Sprintf("%d", starWeapon)
+
+	// Always update normal filters
 	if filters[studentIDStr] == nil {
 		filters[studentIDStr] = make(map[string]int)
 	}
-	filters[studentIDStr][starLevel]++
+	filters[studentIDStr][starWeaponStr]++
+
+	// Update assist filters if this is an assist
+	if isAssist {
+		if assistFilters[studentIDStr] == nil {
+			assistFilters[studentIDStr] = make(map[string]int)
+		}
+		assistFilters[studentIDStr][starWeaponStr]++
+	}
 }
 
 func downloadAndCreateLunaticFilter(season string, dryRun bool) error {
 	// Download party file
 	partyURL := fmt.Sprintf("https://objectstorage.ap-chuncheon-1.oraclecloud.com/p/wY1_nvEFKH6vubbNiE6XiFTFqFCLugHoRIsTlURURX1Hw2YpGKaK0gMxPQGrl5tr/n/axpzmkynkrby/b/austin-oracle-bucket/o/batorment/v2/party/%s.json", season)
 
-	log.Printf("Downloading party file for lunatic filter: %s...", season)
+	log.Printf("Downloading party file for filters: %s...", season)
 	partyData, err := common.GetDataFromURL(partyURL)
 	if err != nil {
 		return fmt.Errorf("failed to download party file: %v", err)
@@ -483,32 +505,45 @@ func downloadAndCreateLunaticFilter(season string, dryRun bool) error {
 		return fmt.Errorf("failed to unmarshal party file: %v", err)
 	}
 
-	// Count parties with score >= LunaticMinScore for logging
-	filteredCount := 0
+	// Count parties for logging
+	lunaticCount := 0
+	nonLunaticCount := 0
 	for _, party := range oldPartyFile.Parties {
 		if party.Score >= constants.LunaticMinScore {
-			filteredCount++
+			lunaticCount++
+		} else {
+			nonLunaticCount++
 		}
 	}
 
-	log.Printf("Processing %d parties with score >= %d for lunatic filter", filteredCount, constants.LunaticMinScore)
+	log.Printf("Processing %d lunatic parties (>= %d) and %d non-lunatic parties", lunaticCount, constants.LunaticMinScore, nonLunaticCount)
 
-	// Create lunatic filter using only lunatic-level parties
+	// Create lunatic filter
 	lunaticFilter := createLunaticFilter(&oldPartyFile)
-
-	// Convert to JSON
-	filterData, err := json.Marshal(lunaticFilter)
+	lunaticFilterData, err := json.Marshal(lunaticFilter)
 	if err != nil {
 		return fmt.Errorf("failed to marshal lunatic filter: %v", err)
 	}
 
-	// Upload to lunatic-filter directory
-	fileName := fmt.Sprintf("%s.json", season)
-	if err := data.UploadFile("batorment/v3/lunatic-filter", fileName, filterData, dryRun); err != nil {
-		return fmt.Errorf("failed to upload lunatic filter: %v", err)
+	// Create non-lunatic filter  
+	nonLunaticFilter := createNonLunaticFilter(&oldPartyFile)
+	nonLunaticFilterData, err := json.Marshal(nonLunaticFilter)
+	if err != nil {
+		return fmt.Errorf("failed to marshal non-lunatic filter: %v", err)
 	}
 
-	log.Printf("Successfully created lunatic filter for season %s", season)
+	// Upload both filters
+	fileName := fmt.Sprintf("%s.json", season)
+	
+	if err := data.UploadFile("batorment/v3/lunatic-filter", fileName, lunaticFilterData, dryRun); err != nil {
+		return fmt.Errorf("failed to upload lunatic filter: %v", err)
+	}
+	
+	if err := data.UploadFile("batorment/v3/nonlunatic-filter", fileName, nonLunaticFilterData, dryRun); err != nil {
+		return fmt.Errorf("failed to upload non-lunatic filter: %v", err)
+	}
+
+	log.Printf("Successfully created lunatic and non-lunatic filters for season %s", season)
 	return nil
 }
 
