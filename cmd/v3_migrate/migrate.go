@@ -386,17 +386,17 @@ func downloadAndUploadSeason(season string, dryRun bool) error {
 	fileName := fmt.Sprintf("%s.json", season)
 
 	// Upload party file
-	if err := data.UploadFile("v3/party", fileName, newPartyData, dryRun); err != nil {
+	if err := data.UploadFile("batorment/v3/party", fileName, newPartyData, dryRun); err != nil {
 		return fmt.Errorf("failed to upload party file: %v", err)
 	}
 
 	// Upload filter file
-	if err := data.UploadFile("v3/filter", fileName, filterData, dryRun); err != nil {
+	if err := data.UploadFile("batorment/v3/filter", fileName, filterData, dryRun); err != nil {
 		return fmt.Errorf("failed to upload filter file: %v", err)
 	}
 
 	// Upload summary file
-	if err := data.UploadFile("v3/summary", fileName, newSummaryData, dryRun); err != nil {
+	if err := data.UploadFile("batorment/v3/summary", fileName, newSummaryData, dryRun); err != nil {
 		return fmt.Errorf("failed to upload summary file: %v", err)
 	}
 
@@ -407,7 +407,7 @@ func downloadAndUploadSeason(season string, dryRun bool) error {
 func main() {
 	// Initialize logger
 	common.InitLogger()
-	
+
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run migrate.go <seasons...> [--dry-run]")
 		fmt.Println("Example: go run cmd/v3_migrate/migrate.go S80-0 S80-1 --dry-run")
