@@ -25,7 +25,7 @@ func createLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATorment
 			for _, partyTeam := range party.PartyData {
 				for _, studentDetailID := range partyTeam {
 					if studentDetailID != 0 {
-						logic.UpdatePartyFilters(filters, assistFilters, studentDetailID)
+						logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
 					}
 				}
 			}

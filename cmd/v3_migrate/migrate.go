@@ -460,12 +460,11 @@ func updateFiltersFromStudentID(filters map[string]map[string]int, assistFilters
 			assistFilters[studentIDStr] = make(map[string]int)
 		}
 		assistFilters[studentIDStr][starLevel]++
-	} else {
-		if filters[studentIDStr] == nil {
-			filters[studentIDStr] = make(map[string]int)
-		}
-		filters[studentIDStr][starLevel]++
 	}
+	if filters[studentIDStr] == nil {
+		filters[studentIDStr] = make(map[string]int)
+	}
+	filters[studentIDStr][starLevel]++
 }
 
 func downloadAndCreateLunaticFilter(season string, dryRun bool) error {
