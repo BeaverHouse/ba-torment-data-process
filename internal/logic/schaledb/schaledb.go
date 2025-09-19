@@ -327,6 +327,8 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		// Upload image + wait 1 second to avoid rate limiting or timeout
 		logic_upload.UploadCharacterImage(studentIDInt, false, false)
 		time.Sleep(1 * time.Second)
+
+		log.Printf("Student %s (%s) processed", studentID, completeData.Name)
 	}
 
 	studentMapBytes, err := json.Marshal(studentMap)
