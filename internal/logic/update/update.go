@@ -1,66 +1,17 @@
-package batch
+package update
 
 import (
 	"ba-torment-data-process/app/common"
 	"ba-torment-data-process/app/database"
-	"ba-torment-data-process/app/logic"
-	"ba-torment-data-process/app/parse"
 	"ba-torment-data-process/app/types"
-	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/logic/filter"
+	"ba-torment-data-process/internal/logic/parse"
 	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"encoding/json"
 	"fmt"
 
 	"go.uber.org/zap"
 )
-
-func createLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATormentFilter) *types.BATormentFilter {
-	filters := make(map[string](map[string]int))
-	assistFilters := make(map[string](map[string]int))
-
-	// Filter parties with score >= LunaticMinScore
-	for _, party := range partyData.PartyDetail {
-		if party.Score >= constants.LunaticMinScore {
-			// Process each party's characters
-			for _, partyTeam := range party.PartyData {
-				for _, studentDetailID := range partyTeam {
-					if studentDetailID != 0 {
-						logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
-					}
-				}
-			}
-		}
-	}
-
-	return &types.BATormentFilter{
-		Filters:       filters,
-		AssistFilters: assistFilters,
-	}
-}
-
-func createNonLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATormentFilter) *types.BATormentFilter {
-	filters := make(map[string](map[string]int))
-	assistFilters := make(map[string](map[string]int))
-
-	// Filter parties with score < LunaticMinScore
-	for _, party := range partyData.PartyDetail {
-		if party.Score < constants.LunaticMinScore {
-			// Process each party's characters
-			for _, partyTeam := range party.PartyData {
-				for _, studentDetailID := range partyTeam {
-					if studentDetailID != 0 {
-						logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
-					}
-				}
-			}
-		}
-	}
-
-	return &types.BATormentFilter{
-		Filters:       filters,
-		AssistFilters: assistFilters,
-	}
-}
 
 func UpdateData() {
 	defer func() {
@@ -111,7 +62,7 @@ func UpdateData() {
 		logic_upload.UploadFile("v3/filter", fmt.Sprintf("%s.json", raid.RaidID), filterResultBytes, dryRun)
 
 		// Create and upload lunatic filter
-		lunaticFilter := createLunaticFilter(partyData, filterResult)
+		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
 		lunaticFilterBytes, err := json.Marshal(lunaticFilter)
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData - lunatic filter", err))
@@ -121,7 +72,7 @@ func UpdateData() {
 		}
 
 		// Create and upload non-lunatic filter
-		nonLunaticFilter := createNonLunaticFilter(partyData, filterResult)
+		nonLunaticFilter := filter.CreateNonLunaticFilter(partyData, filterResult)
 		nonLunaticFilterBytes, err := json.Marshal(nonLunaticFilter)
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData - non-lunatic filter", err))

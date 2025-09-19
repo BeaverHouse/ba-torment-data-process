@@ -7,8 +7,8 @@ import (
 	"sort"
 
 	"ba-torment-data-process/app/common"
-	"ba-torment-data-process/app/logic"
 	"ba-torment-data-process/app/types"
+	"ba-torment-data-process/internal/logic"
 )
 
 // Parse Arona AI data into BA Torment website's party data format.
