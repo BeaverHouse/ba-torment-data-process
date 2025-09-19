@@ -5,6 +5,7 @@ import (
 	"ba-torment-data-process/app/data"
 	"ba-torment-data-process/app/database"
 	"ba-torment-data-process/app/types"
+	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"slices"
 
 	"go.uber.org/zap"
@@ -45,7 +46,7 @@ func UpdateStudentInfo() error {
 			return common.WrapErrorWithContext("UpdateStudentInfo", err)
 		}
 
-		if err := data.UploadCharacterImage(student.ID, false, false); err != nil {
+		if err := logic_upload.UploadCharacterImage(student.ID, false, false); err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateStudentInfo", err))
 			continue
 		}

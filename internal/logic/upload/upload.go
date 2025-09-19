@@ -1,4 +1,4 @@
-package data
+package logic_upload
 
 import (
 	"ba-torment-data-process/app/common"
@@ -14,6 +14,8 @@ import (
 
 	"go.uber.org/zap"
 )
+
+const schaleDBURL = "https://schale-db.com/"
 
 var (
 	fileUploadURL string
