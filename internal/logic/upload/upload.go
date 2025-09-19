@@ -28,7 +28,7 @@ func init() {
 	adminAPIKey = logic.GetEnv("ADMIN_API_KEY", "")
 }
 
-// Uploads a file to the Oracle Object Storage.
+// Uploads a file to the S3 via File Manager API.
 func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 	if dryRun {
 		// Create directory if it doesn't exist
@@ -76,7 +76,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 	}
 }
 
-// Uploads the character image from SchaleDB to the Oracle Object Storage.
+// Uploads the character image from SchaleDB via File Manager API.
 func UploadCharacterImage(id int, isTest bool, dryRun bool) error {
 
 	imgBytes, err := common.GetDataFromURL(schaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
