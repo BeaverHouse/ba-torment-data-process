@@ -27,11 +27,6 @@ func UpdateData() {
 		},
 	}
 
-	// pendingRaids, err := database.GetPendingRaids()
-	// if err != nil {
-	// 	common.ExitIfError(common.WrapErrorWithContext("UpdateData", err))
-	// }
-
 	if len(pendingRaids) == 0 {
 		common.LogInfo("업데이트할 총력전 ID가 없습니다.")
 		return

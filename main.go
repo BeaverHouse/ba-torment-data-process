@@ -11,10 +11,5 @@ func main() {
 	common.InitLogger()
 	database.InitPostgres()
 
-	batch.ScrapeAronaAI()
-	batch.UpdateData()
-	batch.UpdateStudentInfo()
-	// batch.UpdateYouTubeChannels()
 	batch.DeleteOldRaidData(200)
-
 }

@@ -53,16 +53,6 @@ func LoadEnv() {
 	}
 }
 
-// GetEnv returns the value of the environment variable.
-// If the environment variable is not set, it returns the default value.
-func GetEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
 // GetEssentialEnv returns the value of the environment variable.
 // It'll panic if the environment variable is not set.
 func GetEssentialEnv(key string) string {

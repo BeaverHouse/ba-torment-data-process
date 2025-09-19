@@ -1,8 +1,6 @@
 package common
 
 import (
-	"os"
-
 	"go.uber.org/zap"
 )
 
@@ -16,26 +14,8 @@ func InitLogger() {
 	}
 }
 
-// ExitIfError exits the program if error is fired.
-func ExitIfError(err error) {
-	if err == nil {
-		return
-	}
-
-	if runtimeErr, ok := err.(*RuntimeError); ok {
-		logger.Fatal(runtimeErr.Message, zap.String("function", runtimeErr.FunctionName))
-		os.Exit(1)
-	}
-
-	logger.Fatal(err.Error())
-}
-
 func LogInfo(message string, fields ...zap.Field) {
 	logger.Info(message, fields...)
-}
-
-func LogWarn(message string, fields ...zap.Field) {
-	logger.Warn(message, fields...)
 }
 
 func LogError(err error) {
