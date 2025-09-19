@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"ba-torment-data-process/internal/db/postgres"
+	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"ba-torment-data-process/internal/types"
 )
 
@@ -202,6 +203,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	}
 
 	result := make(map[string]*types.StudentData)
+	studentMap := make(map[string]string)
 
 	for studentID, studentData := range rawData {
 		dataMap, ok := studentData.(map[string]any)
@@ -318,7 +320,17 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 			SearchKeyword: append(completeData.SearchTags, japaneseStudentInfo[studentID].SearchTags...),
 			Detail:        completeDataBytes,
 		})
+
+		studentMap[studentID] = completeData.Name
 	}
+
+	studentMapBytes, err := json.Marshal(studentMap)
+	if err != nil {
+		log.Printf("Failed to marshal student map: %v", err)
+		return nil, err
+	}
+
+	logic_upload.UploadFile("batorment/v3", "student_map.json", studentMapBytes, false)
 
 	return result, nil
 }
