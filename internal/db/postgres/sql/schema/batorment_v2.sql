@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS batorment_v2.videos (
 CREATE TABLE IF NOT EXISTS batorment_v2.raids (
     raid_id VARCHAR(20) NOT NULL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
+    short_name VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL,
     top_level VARCHAR NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
