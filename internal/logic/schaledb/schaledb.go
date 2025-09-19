@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"ba-torment-data-process/internal/db/postgres"
 	logic_upload "ba-torment-data-process/internal/logic/upload"
@@ -322,6 +323,10 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		})
 
 		studentMap[studentID] = completeData.Name
+
+		// Upload image + wait 1 second to avoid rate limiting or timeout
+		logic_upload.UploadCharacterImage(studentIDInt, false, false)
+		time.Sleep(1 * time.Second)
 	}
 
 	studentMapBytes, err := json.Marshal(studentMap)
