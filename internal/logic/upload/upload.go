@@ -10,12 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
-
-	"go.uber.org/zap"
 )
-
-const schaleDBURL = "https://schale-db.com/"
 
 var (
 	fileUploadURL string
@@ -41,10 +36,10 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 
 		part, err := writer.CreateFormFile("file", fileName)
 		if err != nil {
-			return common.WrapErrorWithContext("UploadFile", err)
+			return fmt.Errorf("failed to create form file: %v", err)
 		}
 		if _, err := io.Copy(part, bytes.NewReader(data)); err != nil {
-			return common.WrapErrorWithContext("UploadFile", err)
+			return fmt.Errorf("failed to copy file data: %v", err)
 		}
 		writer.WriteField("upload_path", path)
 		writer.Close()
@@ -53,7 +48,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 			fmt.Sprintf("%s/files/upload", fileUploadURL),
 			body)
 		if err != nil {
-			return common.WrapErrorWithContext("UploadFile", err)
+			return fmt.Errorf("API request failed: %v", err)
 		}
 
 		req.Header.Set("X-API-Key", adminAPIKey)
@@ -62,34 +57,14 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			return common.WrapErrorWithContext("UploadFile", err)
+			return fmt.Errorf("API request failed: %v", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			return common.WrapErrorWithContext("UploadFile", fmt.Errorf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body)))
+			return fmt.Errorf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body))
 		}
-
-		common.LogInfo("File uploaded", zap.String("path", path), zap.String("fileName", fileName))
 		return nil
 	}
-}
-
-// Uploads the character image from SchaleDB via File Manager API.
-func UploadCharacterImage(id int, isTest bool, dryRun bool) error {
-
-	imgBytes, err := common.GetDataFromURL(schaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
-	if err != nil {
-		return common.WrapErrorWithContext("UploadCharacterImage", err)
-	}
-
-	path := "batorment/character"
-
-	err = UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
-	if err != nil {
-		return common.WrapErrorWithContext("UploadCharacterImage", err)
-	}
-
-	return nil
 }

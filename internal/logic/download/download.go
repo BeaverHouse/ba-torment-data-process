@@ -1,4 +1,4 @@
-package schaledb
+package logic_download
 
 import (
 	"fmt"
@@ -7,16 +7,11 @@ import (
 	"time"
 )
 
-const (
-	SCHALEDB_URL = "https://schaledb.com/data"
-)
-
-// Gets data from SchaleDB.
+// Gets data from URL.
 //
 // If the URL is invalid or the data is empty, it returns an error.
-func getDataFromURL(path string) ([]byte, error) {
+func GetDataFromURL(url string) ([]byte, error) {
 	start := time.Now()
-	url := SCHALEDB_URL + path
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from URL: %v", err)

@@ -12,9 +12,12 @@ import (
 	"time"
 
 	"ba-torment-data-process/internal/db/postgres"
+	logic_download "ba-torment-data-process/internal/logic/download"
 	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"ba-torment-data-process/internal/types"
 )
+
+const schaleDBURL = "https://schaledb.com/"
 
 // Localization data structure
 type LocalizationRawData struct {
@@ -28,7 +31,7 @@ type JapaneseStudentInfo struct {
 
 // loadBuffLocalization reads localization.kr.json file and returns BuffName map
 func loadBuffLocalization() (map[string]string, error) {
-	byteValue, err := getDataFromURL("/kr/localization.min.json")
+	byteValue, err := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/localization.min.json")
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +47,7 @@ func loadBuffLocalization() (map[string]string, error) {
 }
 
 func loadJapaneseStudentInfo() (map[string]JapaneseStudentInfo, error) {
-	byteValue, err := getDataFromURL("/jp/students.json")
+	byteValue, err := logic_download.GetDataFromURL(schaleDBURL + "/data/jp/students.json")
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +184,7 @@ var UnusedProperties = []string{
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
 
-	byteValue, err := getDataFromURL("/kr/students.json")
+	byteValue, err := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/students.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from URL: %v", err)
 	}
@@ -324,11 +327,15 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 
 		studentMap[studentID] = completeData.Name
 
-		// Upload image + wait 1 second to avoid rate limiting or timeout
-		logic_upload.UploadCharacterImage(studentIDInt, false, false)
-		time.Sleep(1 * time.Second)
-
+		// Upload image + wait 3 second. Supabase S3 has performance issue when uploading too many files at once.
+		err = uploadCharacterImage(studentIDInt, false, false)
+		if err != nil {
+			log.Printf("Failed to upload image for student %s: %v", studentID, err)
+			return nil, err
+		}
 		log.Printf("Student %s (%s) processed", studentID, completeData.Name)
+
+		time.Sleep(3 * time.Second)
 	}
 
 	studentMapBytes, err := json.Marshal(studentMap)
@@ -337,7 +344,29 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		return nil, err
 	}
 
-	logic_upload.UploadFile("batorment/v3", "student_map.json", studentMapBytes, false)
+	err = logic_upload.UploadFile("batorment/v3", "student_map.json", studentMapBytes, false)
+	if err != nil {
+		log.Printf("Failed to upload student map: %v", err)
+		return nil, err
+	}
 
 	return result, nil
+}
+
+// Uploads the character image from SchaleDB via File Manager API.
+func uploadCharacterImage(id int, isTest bool, dryRun bool) error {
+
+	imgBytes, err := logic_download.GetDataFromURL(schaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
+	if err != nil {
+		return fmt.Errorf("failed to get image from SchaleDB: %v", err)
+	}
+
+	path := "batorment/character"
+
+	err = logic_upload.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
+	if err != nil {
+		return fmt.Errorf("failed to upload image to S3: %v", err)
+	}
+
+	return nil
 }
