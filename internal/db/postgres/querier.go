@@ -14,6 +14,7 @@ import (
 type Querier interface {
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
 	SoftDeleteOldRaids(ctx context.Context, createdAt pgtype.Timestamp) (pgconn.CommandTag, error)
+	UpdateRaidStatusToComplete(ctx context.Context, raidID string) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -22,3 +22,14 @@ AND deleted_at IS NULL
 func (q *Queries) SoftDeleteOldRaids(ctx context.Context, createdAt pgtype.Timestamp) (pgconn.CommandTag, error) {
 	return q.db.Exec(ctx, softDeleteOldRaids, createdAt)
 }
+
+const updateRaidStatusToComplete = `-- name: UpdateRaidStatusToComplete :exec
+UPDATE batorment_v2.raids
+SET status = 'COMPLETE', updated_at = NOW()
+WHERE raid_id = $1
+`
+
+func (q *Queries) UpdateRaidStatusToComplete(ctx context.Context, raidID string) error {
+	_, err := q.db.Exec(ctx, updateRaidStatusToComplete, raidID)
+	return err
+}

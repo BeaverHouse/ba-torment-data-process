@@ -1,12 +1,17 @@
 package update
 
 import (
+	"context"
+	"strconv"
+
 	"ba-torment-data-process/app/common"
-	"ba-torment-data-process/app/database"
 	"ba-torment-data-process/app/types"
+	"ba-torment-data-process/internal/db/postgres"
+	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/logic/filter"
 	"ba-torment-data-process/internal/logic/parse"
 	logic_upload "ba-torment-data-process/internal/logic/upload"
+	internal_types "ba-torment-data-process/internal/types"
 	"encoding/json"
 	"fmt"
 
@@ -17,6 +22,34 @@ func UpdateData() {
 	defer func() {
 		common.LogInfo("총력전 데이터 업데이트 프로세스 완료")
 	}()
+
+	// Create postgres config from environment
+	cfg := internal_types.PostgresConfig{
+		Host:     common.GetEssentialEnv("POSTGRES_HOST"),
+		Port:     5432,
+		User:     common.GetEssentialEnv("POSTGRES_USER"),
+		Password: common.GetEssentialEnv("POSTGRES_PASSWORD"),
+		DBName:   common.GetEssentialEnv("POSTGRES_DBNAME"),
+		SSLMode:  "disable",
+	}
+
+	if portStr := logic.GetEnv("POSTGRES_PORT", "5432"); portStr != "" {
+		if parsed, err := strconv.Atoi(portStr); err == nil {
+			cfg.Port = parsed
+		}
+	}
+
+	// Create database pool
+	pool, err := postgres.NewPool(cfg)
+	if err != nil {
+		common.LogError(common.WrapErrorWithContext("UpdateData - creating pool", err))
+		return
+	}
+	defer pool.Close()
+
+	// Create queries
+	queries := postgres.New(pool)
+	ctx := context.Background()
 
 	dryRun := true
 	pendingRaids := []types.Raid{
@@ -88,7 +121,7 @@ func UpdateData() {
 		}
 		logic_upload.UploadFile("v3/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
 
-		err = database.UpdateRaidStatusToComplete(raid.RaidID)
+		err = queries.UpdateRaidStatusToComplete(ctx, raid.RaidID)
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
