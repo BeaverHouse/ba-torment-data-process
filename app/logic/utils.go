@@ -18,16 +18,6 @@ func GetStudentDetailIDInt(studentID int, star int, weaponStar int, isAssist boo
 	return studentID*1000 + star*100 + weaponStar*10 + isAssistInt
 }
 
-// Returns the level of the score. (Lunatic / Torment / Insane)
-func GetLevelFromScore(score int) string {
-	if score >= 44000000 {
-		return "L"
-	} else if score >= 31076000 {
-		return "T"
-	}
-	return "I"
-}
-
 // Splits the season string into season & category. (Ex. S16-1 >> S16, 1)
 func SplitSeasonString(season string) (string, int, error) {
 	parts := strings.Split(season, "-")

@@ -57,14 +57,3 @@ type NamedUser struct {
 	DeletedAt   sql.NullTime   `json:"deleted_at"`
 	Score       int            `json:"score"`
 }
-
-// *************************************
-// ********** Parsed from CSV **********
-// *************************************
-
-type RankData struct {
-	UserID    int
-	FinalRank int
-	Score     int
-	PartScore int
-}

@@ -9,10 +9,7 @@ import (
 )
 
 type Querier interface {
-	DeleteStudentData(ctx context.Context, studentID int32) error
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
-	ListStudents(ctx context.Context) ([]ListStudentsRow, error)
-	UpdateStudentData(ctx context.Context, arg UpdateStudentDataParams) error
 }
 
 var _ Querier = (*Queries)(nil)

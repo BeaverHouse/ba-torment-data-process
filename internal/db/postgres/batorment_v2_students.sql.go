@@ -9,16 +9,6 @@ import (
 	"context"
 )
 
-const deleteStudentData = `-- name: DeleteStudentData :exec
-DELETE FROM batorment_v2.students
-WHERE student_id = $1
-`
-
-func (q *Queries) DeleteStudentData(ctx context.Context, studentID int32) error {
-	_, err := q.db.Exec(ctx, deleteStudentData, studentID)
-	return err
-}
-
 const insertStudentData = `-- name: InsertStudentData :exec
 INSERT INTO batorment_v2.students (student_id, name_ko, name_ja, search_keyword, detail, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
@@ -40,69 +30,6 @@ type InsertStudentDataParams struct {
 
 func (q *Queries) InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error {
 	_, err := q.db.Exec(ctx, insertStudentData,
-		arg.StudentID,
-		arg.NameKo,
-		arg.NameJa,
-		arg.SearchKeyword,
-		arg.Detail,
-	)
-	return err
-}
-
-const listStudents = `-- name: ListStudents :many
-SELECT student_id, name_ko, name_ja, search_keyword
-FROM batorment_v2.students
-ORDER BY name_ko
-`
-
-type ListStudentsRow struct {
-	StudentID     int32    `json:"student_id"`
-	NameKo        string   `json:"name_ko"`
-	NameJa        string   `json:"name_ja"`
-	SearchKeyword []string `json:"search_keyword"`
-}
-
-func (q *Queries) ListStudents(ctx context.Context) ([]ListStudentsRow, error) {
-	rows, err := q.db.Query(ctx, listStudents)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListStudentsRow{}
-	for rows.Next() {
-		var i ListStudentsRow
-		if err := rows.Scan(
-			&i.StudentID,
-			&i.NameKo,
-			&i.NameJa,
-			&i.SearchKeyword,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const updateStudentData = `-- name: UpdateStudentData :exec
-UPDATE batorment_v2.students
-SET name_ko = $2, name_ja = $3, search_keyword = $4, detail = $5, updated_at = NOW()
-WHERE student_id = $1
-`
-
-type UpdateStudentDataParams struct {
-	StudentID     int32    `json:"student_id"`
-	NameKo        string   `json:"name_ko"`
-	NameJa        string   `json:"name_ja"`
-	SearchKeyword []string `json:"search_keyword"`
-	Detail        []byte   `json:"detail"`
-}
-
-func (q *Queries) UpdateStudentData(ctx context.Context, arg UpdateStudentDataParams) error {
-	_, err := q.db.Exec(ctx, updateStudentData,
 		arg.StudentID,
 		arg.NameKo,
 		arg.NameJa,

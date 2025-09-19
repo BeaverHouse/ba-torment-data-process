@@ -2,12 +2,12 @@ package batch
 
 import (
 	"ba-torment-data-process/app/common"
-	"ba-torment-data-process/app/data"
 	"ba-torment-data-process/app/database"
 	"ba-torment-data-process/app/logic"
 	"ba-torment-data-process/app/parse"
 	"ba-torment-data-process/app/types"
 	"ba-torment-data-process/internal/constants"
+	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"encoding/json"
 	"fmt"
 
@@ -107,8 +107,8 @@ func UpdateData() {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadFile("v3/party", fmt.Sprintf("%s.json", raid.RaidID), partyDataBytes, dryRun)
-		data.UploadFile("v3/filter", fmt.Sprintf("%s.json", raid.RaidID), filterResultBytes, dryRun)
+		logic_upload.UploadFile("v3/party", fmt.Sprintf("%s.json", raid.RaidID), partyDataBytes, dryRun)
+		logic_upload.UploadFile("v3/filter", fmt.Sprintf("%s.json", raid.RaidID), filterResultBytes, dryRun)
 
 		// Create and upload lunatic filter
 		lunaticFilter := createLunaticFilter(partyData, filterResult)
@@ -116,7 +116,7 @@ func UpdateData() {
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData - lunatic filter", err))
 		} else {
-			data.UploadFile("v3/lunatic-filter", fmt.Sprintf("%s.json", raid.RaidID), lunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("v3/lunatic-filter", fmt.Sprintf("%s.json", raid.RaidID), lunaticFilterBytes, dryRun)
 			common.LogInfo("루나틱 필터 업로드 완료", zap.String("raidID", raid.RaidID))
 		}
 
@@ -126,7 +126,7 @@ func UpdateData() {
 		if err != nil {
 			common.LogError(common.WrapErrorWithContext("UpdateData - non-lunatic filter", err))
 		} else {
-			data.UploadFile("v3/nonlunatic-filter", fmt.Sprintf("%s.json", raid.RaidID), nonLunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("v3/nonlunatic-filter", fmt.Sprintf("%s.json", raid.RaidID), nonLunaticFilterBytes, dryRun)
 			common.LogInfo("논루나틱 필터 업로드 완료", zap.String("raidID", raid.RaidID))
 		}
 
@@ -140,7 +140,7 @@ func UpdateData() {
 			common.LogError(common.WrapErrorWithContext("UpdateData", err))
 			continue
 		}
-		data.UploadFile("v3/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
+		logic_upload.UploadFile("v3/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
 
 		err = database.UpdateRaidStatusToComplete(raid.RaidID)
 		if err != nil {
