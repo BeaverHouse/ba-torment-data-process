@@ -15,7 +15,7 @@ import (
 	"ba-torment-data-process/internal/types"
 )
 
-func UpdateData() {
+func UpdateData(dryRun bool) {
 	defer func() {
 		log.Println("총력전 데이터 업데이트 프로세스 완료")
 	}()
@@ -49,7 +49,6 @@ func UpdateData() {
 	queries := postgres.New(pool)
 	ctx := context.Background()
 
-	dryRun := true
 	pendingRaids := []types.Raid{
 		{
 			RaidID: "S80-0",
@@ -119,11 +118,13 @@ func UpdateData() {
 		}
 		logic_upload.UploadFile("v3/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
 
-		err = queries.UpdateRaidStatusToComplete(ctx, raid.RaidID)
-		if err != nil {
-			log.Printf("UpdateData: %v", err)
-			continue
+		if !dryRun {
+			err = queries.UpdateRaidStatusToComplete(ctx, raid.RaidID)
+			if err != nil {
+				log.Printf("UpdateData: %v", err)
+				continue
+			}
+			log.Printf("총력전 ID 업데이트 완료: %s", raid.RaidID)
 		}
-		log.Printf("총력전 ID 업데이트 완료: %s", raid.RaidID)
 	}
 }

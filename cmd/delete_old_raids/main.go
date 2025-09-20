@@ -13,12 +13,19 @@ import (
 	"ba-torment-data-process/internal/types"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	defer func() {
 		log.Println("오래된 총력전 데이터 삭제 프로세스 완료")
 	}()
+
+	if logic.IsLocalEnv() {
+		if err := godotenv.Load(); err != nil {
+			log.Fatalf("Failed to load .env file: %v", err)
+		}
+	}
 
 	// Get days from args or default to 200
 	days := 200
