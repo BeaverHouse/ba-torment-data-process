@@ -31,13 +31,10 @@ type JapaneseStudentInfo struct {
 
 // loadBuffLocalization reads localization.kr.json file and returns BuffName map
 func loadBuffLocalization() (map[string]string, error) {
-	byteValue, err := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/localization.min.json")
-	if err != nil {
-		return nil, err
-	}
+	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/localization.min.json")
 
 	var locData LocalizationRawData
-	err = json.Unmarshal(byteValue, &locData)
+	err := json.Unmarshal(byteValue, &locData)
 	if err != nil {
 		log.Printf("Failed to unmarshal localization: %v", err)
 		return nil, err
@@ -47,13 +44,10 @@ func loadBuffLocalization() (map[string]string, error) {
 }
 
 func loadJapaneseStudentInfo() (map[string]JapaneseStudentInfo, error) {
-	byteValue, err := logic_download.GetDataFromURL(schaleDBURL + "/data/jp/students.json")
-	if err != nil {
-		return nil, err
-	}
+	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/jp/students.json")
 
 	var studentData map[string]JapaneseStudentInfo
-	err = json.Unmarshal(byteValue, &studentData)
+	err := json.Unmarshal(byteValue, &studentData)
 	if err != nil {
 		log.Printf("Failed to unmarshal localization: %v", err)
 		return nil, err
@@ -184,13 +178,10 @@ var UnusedProperties = []string{
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
 
-	byteValue, err := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/students.json")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get data from URL: %v", err)
-	}
+	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/students.json")
 
 	var rawData map[string]any
-	err = json.Unmarshal(byteValue, &rawData)
+	err := json.Unmarshal(byteValue, &rawData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
 	}
@@ -328,7 +319,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		studentMap[studentID] = completeData.Name
 
 		// Upload image + wait 3 second. Supabase S3 has performance issue when uploading too many files at once.
-		err = uploadCharacterImage(studentIDInt, false, false)
+		err = uploadCharacterImage(studentIDInt, false)
 		if err != nil {
 			log.Printf("Failed to upload image for student %s: %v", studentID, err)
 			return nil, err
@@ -354,16 +345,13 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 }
 
 // Uploads the character image from SchaleDB via File Manager API.
-func uploadCharacterImage(id int, isTest bool, dryRun bool) error {
+func uploadCharacterImage(id int, dryRun bool) error {
 
-	imgBytes, err := logic_download.GetDataFromURL(schaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
-	if err != nil {
-		return fmt.Errorf("failed to get image from SchaleDB: %v", err)
-	}
+	imgBytes := logic_download.GetDataFromURL(schaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
 
 	path := "batorment/character"
 
-	err = logic_upload.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
+	err := logic_upload.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
 	if err != nil {
 		return fmt.Errorf("failed to upload image to S3: %v", err)
 	}

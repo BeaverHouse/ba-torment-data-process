@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -53,7 +52,7 @@ func main() {
 	}
 	pool, err := postgres.NewPool(postgresConfig)
 	if err != nil {
-		panic(fmt.Errorf("failed to connect to database: %v", err))
+		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
 
