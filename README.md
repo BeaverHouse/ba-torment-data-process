@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/BeaverHouse/ba-torment-data-process">
-    <img src="logo.png" alt="Logo" width="100" height="100">
+    <img src="logo.png" alt="Logo" width="100">
   </a>
 
   <p align="center">
@@ -11,8 +11,11 @@
     <a href="https://go.dev/">
       <img src="https://img.shields.io/badge/Go-00ADD8.svg?style=flat&logo=Go&logoColor=white" alt="Go">
     </a>
-    <a href="https://www.cursor.com/">
-      <img src="https://img.shields.io/badge/Cursor-000000.svg?style=flat&logo=Cursor&logoColor=white" alt="Cursor">
+    <a href="https://supabase.com/">
+      <img src="https://img.shields.io/badge/Supabase-34b27b.svg?style=flat&logo=supabase&logoColor=white" alt="Supabase">
+    </a>
+    <a href="https://claude.ai/">
+      <img src="https://img.shields.io/badge/Claude-f4c28e.svg?style=flat&logo=claude&logoColor=white" alt="Claude Code">
     </a>
     <a href="./LICENSE">
       <img src="https://img.shields.io/github/license/BeaverHouse/ba-torment-data-process" alt="License">
@@ -34,8 +37,7 @@ This repository is currently needs more testing and improvements.
 
 ## Documentation
 
-- [Commands for local development](./docs/local-commands-go.md)
-- [Environment variables](./docs/environment-variables.md)
+See the [/docs](./docs) directory.
 
 <br>
 
