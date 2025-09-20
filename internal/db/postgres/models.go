@@ -11,6 +11,7 @@ import (
 type BatormentV2Raid struct {
 	RaidID    string           `json:"raid_id"`
 	Name      string           `json:"name"`
+	ShortName string           `json:"short_name"`
 	Status    string           `json:"status"`
 	TopLevel  string           `json:"top_level"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`

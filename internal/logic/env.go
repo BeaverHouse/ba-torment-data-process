@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-// GetEnv retrieves an environment variable with a default value
+// Retrieves an environment variable with a default string value
 func GetEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -14,6 +14,7 @@ func GetEnv(key, defaultValue string) string {
 	return value
 }
 
+// Retrieves an environment variable with a default int value
 func GetIntEnv(key string, defaultValue int) int {
 	valueStr := GetEnv(key, "")
 	if valueStr == "" {
@@ -24,4 +25,19 @@ func GetIntEnv(key string, defaultValue int) int {
 		return defaultValue
 	}
 	return value
+}
+
+// Check whether the current environment is local
+func IsLocalEnv() bool {
+	return GetEnv("GO_ENV", "local") == "local"
+}
+
+// Check whether the current environment is development
+func IsDevelopmentEnv() bool {
+	return GetEnv("GO_ENV", "local") == "development"
+}
+
+// Check whether the current environment is production
+func IsProductionEnv() bool {
+	return GetEnv("GO_ENV", "local") == "production"
 }

@@ -3,24 +3,27 @@ package parse
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sort"
 
-	"ba-torment-data-process/app/common"
-	"ba-torment-data-process/app/logic"
-	"ba-torment-data-process/app/types"
+	"ba-torment-data-process/internal/logic"
+	"ba-torment-data-process/internal/types"
 )
 
 // Parse Arona AI data into BA Torment website's party data format.
-func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, *types.BATormentFilter, error) {
+func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, *types.BATormentFilter) {
 
 	var aronaAIData *types.AronaAIData
 	fileName := fmt.Sprintf("data/%s.json", seasonString)
 	jsonBytes, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, nil, common.WrapErrorWithContext("ParsePartyDataFromAronaAI", err)
+		log.Fatalf("Failed to read file: %s", fileName)
 	}
-	json.Unmarshal(jsonBytes, &aronaAIData)
+	err = json.Unmarshal(jsonBytes, &aronaAIData)
+	if err != nil {
+		log.Fatalf("Failed to parse JSON: %s", err)
+	}
 
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
@@ -98,5 +101,5 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 		PartyDetail: parties,
 	}
 
-	return &result, &filterResult, nil
+	return &result, &filterResult
 }

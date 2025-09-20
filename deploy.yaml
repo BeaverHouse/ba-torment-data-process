@@ -1,0 +1,15 @@
+deploy:
+  enabled: false
+  env:
+    # Postgres host. I use Supabase for database.
+    - secretKey: "POSTGRES_HOST"
+      remoteRef: "SUPABASE_POSTGRES_HOST"
+    # Postgres user
+    - secretKey: "POSTGRES_USER"
+      remoteRef: "SUPABASE_POSTGRES_USER"
+    # Postgres password
+    - secretKey: "POSTGRES_PASSWORD"
+      remoteRef: "SUPABASE_POSTGRES_PASSWORD"
+    # API key for personal file manager API.
+    - secretKey: "FILEMANAGER_ADMIN_API_KEY"
+      remoteRef: "FILEMANAGER_ADMIN_API_KEY"

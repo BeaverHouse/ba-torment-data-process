@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	if logic.GetEnv("GO_ENV", "local") == "local" {
+	if logic.IsLocalEnv() {
 		if err := godotenv.Load(); err != nil {
 			log.Fatalf("Failed to load .env file: %v", err)
 		}
