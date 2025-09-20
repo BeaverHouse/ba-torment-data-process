@@ -29,31 +29,31 @@ type JapaneseStudentInfo struct {
 	SearchTags []string `json:"SearchTags"`
 }
 
-// loadBuffLocalization reads localization.kr.json file and returns BuffName map
-func loadBuffLocalization() (map[string]string, error) {
+// Reads /data/kr/localization.min.json file and returns BuffName map
+func loadBuffLocalization() map[string]string {
 	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/localization.min.json")
 
 	var locData LocalizationRawData
 	err := json.Unmarshal(byteValue, &locData)
 	if err != nil {
-		log.Printf("Failed to unmarshal localization: %v", err)
-		return nil, err
+		log.Fatalf("Failed to unmarshal localization: %v", err)
 	}
 
-	return locData.BuffName, nil
+	return locData.BuffName
 }
 
-func loadJapaneseStudentInfo() (map[string]JapaneseStudentInfo, error) {
+// Reads /data/jp/students.json file and returns Japanese student info map.
+// This is used to get student names in Japanese.
+func loadJapaneseStudentInfo() map[string]JapaneseStudentInfo {
 	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/jp/students.json")
 
 	var studentData map[string]JapaneseStudentInfo
 	err := json.Unmarshal(byteValue, &studentData)
 	if err != nil {
-		log.Printf("Failed to unmarshal localization: %v", err)
-		return nil, err
+		log.Fatalf("Failed to unmarshal localization: %v", err)
 	}
 
-	return studentData, nil
+	return studentData
 }
 
 // replaceBuffTags replaces <b:> and <d:> tags in skill descriptions with Korean names
@@ -183,19 +183,11 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	var rawData map[string]any
 	err := json.Unmarshal(byteValue, &rawData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
+		log.Fatalf("Failed to unmarshal JSON: %v", err)
 	}
 
-	// Load localization data
-	buffNames, err := loadBuffLocalization()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load buff localization: %v", err)
-	}
-
-	japaneseStudentInfo, err := loadJapaneseStudentInfo()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load Japanese student info: %v", err)
-	}
+	buffNames := loadBuffLocalization()
+	japaneseStudentInfo := loadJapaneseStudentInfo()
 
 	result := make(map[string]*types.StudentData)
 	studentMap := make(map[string]string)

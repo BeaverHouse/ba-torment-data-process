@@ -66,13 +66,11 @@ func UpdateData(dryRun bool) {
 		var partyData *types.BATormentPartyData
 		var summaryData *types.BATormentSummaryData
 
-		// Get from Arona AI
-		partyData, filterResult, err := parse.ParsePartyDataFromAronaAI(raid.RaidID)
+		fileName := fmt.Sprintf("%s.json", raid.RaidID)
 
-		if err != nil {
-			log.Printf("UpdateData: %v", err)
-			continue
-		}
+		// Get from Arona AI
+		partyData, filterResult := parse.ParsePartyDataFromAronaAI(raid.RaidID)
+
 		partyDataBytes, err := json.Marshal(partyData)
 		if err != nil {
 			log.Printf("UpdateData: %v", err)
@@ -83,8 +81,8 @@ func UpdateData(dryRun bool) {
 			log.Printf("UpdateData: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("v3/party", fmt.Sprintf("%s.json", raid.RaidID), partyDataBytes, dryRun)
-		logic_upload.UploadFile("v3/filter", fmt.Sprintf("%s.json", raid.RaidID), filterResultBytes, dryRun)
+		logic_upload.UploadFile("v3/party", fileName, partyDataBytes, dryRun)
+		logic_upload.UploadFile("v3/filter", fileName, filterResultBytes, dryRun)
 
 		// Create and upload lunatic filter
 		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
@@ -92,7 +90,7 @@ func UpdateData(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/lunatic-filter", fmt.Sprintf("%s.json", raid.RaidID), lunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
 			log.Printf("루나틱 필터 업로드 완료: %s", raid.RaidID)
 		}
 
@@ -102,7 +100,7 @@ func UpdateData(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - non-lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/nonlunatic-filter", fmt.Sprintf("%s.json", raid.RaidID), nonLunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
 			log.Printf("논루나틱 필터 업로드 완료: %s", raid.RaidID)
 		}
 
@@ -116,7 +114,7 @@ func UpdateData(dryRun bool) {
 			log.Printf("UpdateData: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("v3/summary", fmt.Sprintf("%s.json", raid.RaidID), summaryDataBytes, dryRun)
+		logic_upload.UploadFile("v3/summary", fileName, summaryDataBytes, dryRun)
 
 		if !dryRun {
 			err = queries.UpdateRaidStatusToComplete(ctx, raid.RaidID)
