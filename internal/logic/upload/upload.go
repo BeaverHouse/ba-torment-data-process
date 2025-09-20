@@ -18,7 +18,7 @@ var (
 
 func init() {
 	fileUploadURL = "https://api.tinyclover.com/file-manager/v1"
-	adminAPIKey = logic.GetEnv("ADMIN_API_KEY", "")
+	adminAPIKey = logic.GetEnv("FILEMANAGER_ADMIN_API_KEY", "")
 }
 
 // Uploads a file to the S3 via File Manager API.

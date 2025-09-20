@@ -1,0 +1,11 @@
+deploy:
+  enabled: false
+  env:
+    - secretKey: "POSTGRES_HOST"
+      remoteRef: "SUPABASE_POSTGRES_HOST"
+    - secretKey: "POSTGRES_USER"
+      remoteRef: "SUPABASE_POSTGRES_USER"
+    - secretKey: "POSTGRES_PASSWORD"
+      remoteRef: "SUPABASE_POSTGRES_PASSWORD"
+    - secretKey: "FILEMANAGER_ADMIN_API_KEY"
+      remoteRef: "FILEMANAGER_ADMIN_API_KEY"
