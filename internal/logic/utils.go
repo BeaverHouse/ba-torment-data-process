@@ -1,7 +1,6 @@
 package logic
 
 import (
-	"ba-torment-data-process/app/common"
 	"fmt"
 	"strconv"
 	"strings"
@@ -22,11 +21,11 @@ func GetStudentDetailIDInt(studentID int, star int, weaponStar int, isAssist boo
 func SplitSeasonString(season string) (string, int, error) {
 	parts := strings.Split(season, "-")
 	if len(parts) != 2 {
-		return "", -1, common.WrapErrorWithContext("SplitSeasonString", fmt.Errorf("invalid season string: %s", season))
+		return "", -1, fmt.Errorf("SplitSeasonString: invalid season string: %s", season)
 	}
 	category, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return "", -1, common.WrapErrorWithContext("SplitSeasonString", err)
+		return "", -1, fmt.Errorf("SplitSeasonString: %w", err)
 	}
 	return strings.Replace(parts[0], "3S", "S", 1), category, nil
 }

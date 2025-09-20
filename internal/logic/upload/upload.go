@@ -1,7 +1,6 @@
 package logic_upload
 
 import (
-	"ba-torment-data-process/app/common"
 	"ba-torment-data-process/internal/logic"
 	"bytes"
 	"fmt"
@@ -18,7 +17,6 @@ var (
 )
 
 func init() {
-	common.LoadEnv()
 	fileUploadURL = "https://api.tinyclover.com/file-manager/v1"
 	adminAPIKey = logic.GetEnv("ADMIN_API_KEY", "")
 }

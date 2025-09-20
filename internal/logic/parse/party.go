@@ -6,8 +6,7 @@ import (
 	"os"
 	"sort"
 
-	"ba-torment-data-process/app/common"
-	"ba-torment-data-process/app/types"
+	"ba-torment-data-process/internal/types"
 	"ba-torment-data-process/internal/logic"
 )
 
@@ -18,7 +17,7 @@ func ParsePartyDataFromAronaAI(seasonString string) (*types.BATormentPartyData, 
 	fileName := fmt.Sprintf("data/%s.json", seasonString)
 	jsonBytes, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, nil, common.WrapErrorWithContext("ParsePartyDataFromAronaAI", err)
+		return nil, nil, fmt.Errorf("ParsePartyDataFromAronaAI: %w", err)
 	}
 	json.Unmarshal(jsonBytes, &aronaAIData)
 

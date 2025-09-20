@@ -1,7 +1,7 @@
 package parse
 
 import (
-	"ba-torment-data-process/app/types"
+	"ba-torment-data-process/internal/types"
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/logic"
 	"fmt"

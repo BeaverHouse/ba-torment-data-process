@@ -2,22 +2,22 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"ba-torment-data-process/app/common"
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	"go.uber.org/zap"
 )
 
 func main() {
 	defer func() {
-		common.LogInfo("오래된 총력전 데이터 삭제 프로세스 완료")
+		log.Println("오래된 총력전 데이터 삭제 프로세스 완료")
 	}()
 
 	// Get days from args or default to 200
@@ -29,26 +29,24 @@ func main() {
 	}
 
 	// Create postgres config from environment
-	cfg := types.PostgresConfig{
-		Host:     common.GetEssentialEnv("POSTGRES_HOST"),
-		Port:     5432,
-		User:     common.GetEssentialEnv("POSTGRES_USER"),
-		Password: common.GetEssentialEnv("POSTGRES_PASSWORD"),
-		DBName:   common.GetEssentialEnv("POSTGRES_DBNAME"),
-		SSLMode:  "disable",
-	}
-
-	if portStr := logic.GetEnv("POSTGRES_PORT", "5432"); portStr != "" {
-		if parsed, err := strconv.Atoi(portStr); err == nil {
-			cfg.Port = parsed
-		}
-	}
-
-	// Create database pool
-	pool, err := postgres.NewPool(cfg)
+	postgresPort := logic.GetEnv("POSTGRES_PORT", "5432")
+	postgresPortInt, err := strconv.Atoi(postgresPort)
 	if err != nil {
-		common.LogError(common.WrapErrorWithContext("main - creating pool", err))
-		return
+		panic("Failed to convert POSTGRES_PORT to int: " + postgresPort)
+	}
+
+	// Initialize database connection
+	postgresConfig := types.PostgresConfig{
+		Host:     logic.GetEnv("POSTGRES_HOST", "localhost"),
+		Port:     postgresPortInt,
+		User:     logic.GetEnv("POSTGRES_USER", "postgres"),
+		Password: logic.GetEnv("POSTGRES_PASSWORD", "postgres"),
+		DBName:   logic.GetEnv("POSTGRES_DB", "postgres"),
+		SSLMode:  logic.GetEnv("POSTGRES_SSLMODE", "disable"),
+	}
+	pool, err := postgres.NewPool(postgresConfig)
+	if err != nil {
+		panic(fmt.Errorf("failed to connect to database: %v", err))
 	}
 	defer pool.Close()
 
@@ -57,7 +55,7 @@ func main() {
 
 	// Calculate cutoff date
 	cutoffDate := time.Now().AddDate(0, 0, -days)
-	
+
 	// Convert to pgtype.Timestamp
 	pgTimestamp := pgtype.Timestamp{
 		Time:  cutoffDate,
@@ -68,17 +66,14 @@ func main() {
 	ctx := context.Background()
 	result, err := queries.SoftDeleteOldRaids(ctx, pgTimestamp)
 	if err != nil {
-		common.LogError(common.WrapErrorWithContext("main - soft delete", err))
+		log.Printf("main - soft delete: %v", err)
 		return
 	}
 
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
-		common.LogInfo("삭제할 총력전 데이터가 없습니다.", zap.Int("days", days))
+		log.Printf("삭제할 총력전 데이터가 없습니다. days: %d", days)
 	} else {
-		common.LogInfo("총력전 데이터 soft delete 완료",
-			zap.Int64("deletedCount", rowsAffected),
-			zap.Int("days", days),
-			zap.Time("cutoffDate", cutoffDate))
+		log.Printf("총력전 데이터 soft delete 완료 - deletedCount: %d, days: %d, cutoffDate: %v", rowsAffected, days, cutoffDate)
 	}
 }
