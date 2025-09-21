@@ -333,6 +333,33 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		return nil, err
 	}
 
+	// Create student search map with Japanese names and search keywords
+	studentSearchMap := make(map[string]map[string]interface{})
+	for studentID, studentData := range rawData {
+		if dataMap, ok := studentData.(map[string]any); ok {
+			if nameKo, exists := dataMap["Name"]; exists {
+				searchData := map[string]interface{}{
+					"nameKo":         nameKo,
+					"nameJa":         japaneseStudentInfo[studentID].Name,
+					"searchKeywords": append(dataMap["SearchTags"].([]string), japaneseStudentInfo[studentID].SearchTags...),
+				}
+				studentSearchMap[studentID] = searchData
+			}
+		}
+	}
+
+	studentSearchMapBytes, err := json.Marshal(studentSearchMap)
+	if err != nil {
+		log.Printf("Failed to marshal student search map: %v", err)
+		return nil, err
+	}
+
+	err = logic_upload.UploadFile("batorment/v3", "student-search-map.json", studentSearchMapBytes, false)
+	if err != nil {
+		log.Printf("Failed to upload student search map: %v", err)
+		return nil, err
+	}
+
 	return result, nil
 }
 
