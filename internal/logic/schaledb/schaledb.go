@@ -327,7 +327,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		return nil, err
 	}
 
-	err = logic_upload.UploadFile("batorment/v3", "student_map.json", studentMapBytes, false)
+	err = logic_upload.UploadFile("batorment/v3", "student-map.json", studentMapBytes, false)
 	if err != nil {
 		log.Printf("Failed to upload student map: %v", err)
 		return nil, err
