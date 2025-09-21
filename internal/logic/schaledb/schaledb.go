@@ -334,11 +334,11 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	}
 
 	// Create student search map with Japanese names and search keywords
-	studentSearchMap := make(map[string]map[string]interface{})
+	studentSearchMap := make(map[string]map[string]any)
 	for studentID, studentData := range rawData {
 		if dataMap, ok := studentData.(map[string]any); ok {
 			if nameKo, exists := dataMap["Name"]; exists {
-				searchData := map[string]interface{}{
+				searchData := map[string]any{
 					"nameKo":         nameKo,
 					"nameJa":         japaneseStudentInfo[studentID].Name,
 					"searchKeywords": append(dataMap["SearchTags"].([]string), japaneseStudentInfo[studentID].SearchTags...),
