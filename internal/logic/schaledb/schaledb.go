@@ -338,10 +338,20 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	for studentID, studentData := range rawData {
 		if dataMap, ok := studentData.(map[string]any); ok {
 			if nameKo, exists := dataMap["Name"]; exists {
+				// Convert []interface{} to []string for SearchTags
+				var searchTags []string
+				if tags, ok := dataMap["SearchTags"].([]interface{}); ok {
+					for _, tag := range tags {
+						if tagStr, ok := tag.(string); ok {
+							searchTags = append(searchTags, tagStr)
+						}
+					}
+				}
+
 				searchData := map[string]any{
 					"nameKo":         nameKo,
 					"nameJa":         japaneseStudentInfo[studentID].Name,
-					"searchKeywords": append(dataMap["SearchTags"].([]string), japaneseStudentInfo[studentID].SearchTags...),
+					"searchKeywords": append(searchTags, japaneseStudentInfo[studentID].SearchTags...),
 				}
 				studentSearchMap[studentID] = searchData
 			}
