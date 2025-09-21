@@ -59,12 +59,12 @@ type StudentData struct {
 	FavorItemUniqueTags []string `json:"FavorItemUniqueTags"`
 
 	// Complex nested structures
-	Skills               StudentSkills   `json:"Skills"`
-	Weapon               StudentWeapon   `json:"Weapon"`
-	Gear                 StudentGear     `json:"Gear"`
-	Summons              []interface{}   `json:"Summons"`
-	SearchTags           []string        `json:"SearchTags"`
-	FurnitureInteraction [][]interface{} `json:"FurnitureInteraction"`
+	Skills               StudentSkills `json:"Skills"`
+	Weapon               StudentWeapon `json:"Weapon"`
+	Gear                 StudentGear   `json:"Gear"`
+	Summons              []any         `json:"Summons"`
+	SearchTags           []string      `json:"SearchTags"`
+	FurnitureInteraction [][]any       `json:"FurnitureInteraction"`
 }
 
 // Skills structure
@@ -90,7 +90,7 @@ type SkillEffect struct {
 	Target               []string              `json:"Target,omitempty"`
 	Scale                []int                 `json:"Scale,omitempty"`
 	Value                [][]int               `json:"Value,omitempty"`
-	AdditionalValue      interface{}           `json:"AdditionalValue,omitempty"`
+	AdditionalValue      any                   `json:"AdditionalValue,omitempty"`
 	Channel              int                   `json:"Channel,omitempty"`
 	Stat                 string                `json:"Stat,omitempty"`
 	Duration             int                   `json:"Duration,omitempty"`

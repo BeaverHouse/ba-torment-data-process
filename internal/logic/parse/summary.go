@@ -1,9 +1,9 @@
 package parse
 
 import (
-	"ba-torment-data-process/internal/types"
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/logic"
+	"ba-torment-data-process/internal/types"
 	"fmt"
 	"sort"
 	"strconv"
@@ -39,14 +39,14 @@ func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCo
 		return types.BATormentLevelData{
 			ClearCount:  len(data),
 			PartyCounts: make(map[string][]int),
-			Top5Partys:  make([][]interface{}, 0),
+			Top5Partys:  make([][]any, 0),
 		}
 	}
 
 	result := types.BATormentLevelData{
 		ClearCount:  len(data),
 		PartyCounts: make(map[string][]int),
-		Top5Partys:  make([][]interface{}, 0),
+		Top5Partys:  make([][]any, 0),
 	}
 
 	parties := make([]string, 0)

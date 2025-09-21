@@ -327,9 +327,46 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		return nil, err
 	}
 
-	err = logic_upload.UploadFile("batorment/v3", "student_map.json", studentMapBytes, false)
+	err = logic_upload.UploadFile("batorment/v3", "student-map.json", studentMapBytes, false)
 	if err != nil {
 		log.Printf("Failed to upload student map: %v", err)
+		return nil, err
+	}
+
+	// Create student search map with Japanese names and search keywords
+	studentSearchMap := make(map[string]map[string]any)
+	for studentID, studentData := range rawData {
+		if dataMap, ok := studentData.(map[string]any); ok {
+			if nameKo, exists := dataMap["Name"]; exists {
+				// Convert []interface{} to []string for SearchTags
+				var searchTags []string
+				if tags, ok := dataMap["SearchTags"].([]interface{}); ok {
+					for _, tag := range tags {
+						if tagStr, ok := tag.(string); ok {
+							searchTags = append(searchTags, tagStr)
+						}
+					}
+				}
+
+				searchData := map[string]any{
+					"nameKo":         nameKo,
+					"nameJa":         japaneseStudentInfo[studentID].Name,
+					"searchKeywords": append(searchTags, japaneseStudentInfo[studentID].SearchTags...),
+				}
+				studentSearchMap[studentID] = searchData
+			}
+		}
+	}
+
+	studentSearchMapBytes, err := json.Marshal(studentSearchMap)
+	if err != nil {
+		log.Printf("Failed to marshal student search map: %v", err)
+		return nil, err
+	}
+
+	err = logic_upload.UploadFile("batorment/v3", "student-search-map.json", studentSearchMapBytes, false)
+	if err != nil {
+		log.Printf("Failed to upload student search map: %v", err)
 		return nil, err
 	}
 
