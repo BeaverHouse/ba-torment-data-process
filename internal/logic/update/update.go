@@ -1,7 +1,6 @@
 package update
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -44,10 +43,6 @@ func UpdateData(dryRun bool) {
 		return
 	}
 	defer pool.Close()
-
-	// Create queries
-	queries := postgres.New(pool)
-	ctx := context.Background()
 
 	pendingRaids := []types.Raid{
 		{
@@ -116,13 +111,5 @@ func UpdateData(dryRun bool) {
 		}
 		logic_upload.UploadFile("v3/summary", fileName, summaryDataBytes, dryRun)
 
-		if !dryRun {
-			err = queries.UpdateRaidStatusToComplete(ctx, raid.RaidID)
-			if err != nil {
-				log.Printf("UpdateData: %v", err)
-				continue
-			}
-			log.Printf("총력전 ID 업데이트 완료: %s", raid.RaidID)
-		}
 	}
 }
