@@ -16,8 +16,8 @@ create table batorment_v3.contents (
   deleted_at TIMESTAMPTZ
 );
 
--- Students table
-CREATE TABLE IF NOT EXISTS batorment_v3.students (
+-- Table for students in Blue Archive
+CREATE TABLE batorment_v3.students (
     student_id INTEGER NOT NULL PRIMARY KEY,
     name_ko VARCHAR(50) NOT NULL,
     name_ja VARCHAR(50) NOT NULL,
