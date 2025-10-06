@@ -1,9 +1,9 @@
 package filter
 
 import (
-	"ba-torment-data-process/internal/types"
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/logic"
+	"ba-torment-data-process/internal/types"
 )
 
 func CreateLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATormentFilter) *types.BATormentFilter {
@@ -34,9 +34,16 @@ func CreateNonLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATorm
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
 
-	// Filter parties with score < LunaticMinScore
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
 	for _, party := range partyData.PartyDetail {
-		if party.Score < constants.LunaticMinScore {
+		maxScore := constants.LunaticMinScore
+		minScore := constants.TormentMinScore
+		if isInsane {
+			maxScore = constants.TormentMinScore
+			minScore = 0
+		}
+		if party.Score >= minScore && party.Score < maxScore {
 			// Process each party's characters
 			for _, partyTeam := range party.PartyData {
 				for _, studentDetailID := range partyTeam {

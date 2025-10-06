@@ -13,11 +13,16 @@ import (
 func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.BATormentSummaryData, error) {
 	// 토먼트/루나틱 데이터 분리
 	var lunaticData, tormentData []types.BATormentPartyDetail
+
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
 	for _, data := range partyData.PartyDetail {
 		if data.Score >= constants.LunaticMinScore {
 			lunaticData = append(lunaticData, data)
 		} else {
-			tormentData = append(tormentData, data)
+			if isInsane || data.Score >= constants.TormentMinScore {
+				tormentData = append(tormentData, data)
+			}
 		}
 	}
 
