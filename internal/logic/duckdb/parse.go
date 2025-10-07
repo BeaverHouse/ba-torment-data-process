@@ -127,8 +127,24 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) (types.AronaAIPart
 	}
 	defer rows.Close()
 
-	var strikers []types.AronaAICharacter
-	var specials []types.AronaAICharacter
+	// Initialize fixed-size arrays
+	strikers := make([]types.AronaAICharacter, 4)
+	specials := make([]types.AronaAICharacter, 2)
+
+	// Fill with empty characters
+	emptyChar := types.AronaAICharacter{
+		StudentID:  0,
+		Star:       0,
+		HasWeapon:  false,
+		WeaponStar: 0,
+		IsAssist:   false,
+	}
+	for i := range 4 {
+		strikers[i] = emptyChar
+	}
+	for i := range 2 {
+		specials[i] = emptyChar
+	}
 
 	for rows.Next() {
 		var sid, level, slot int
@@ -157,12 +173,18 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) (types.AronaAIPart
 			IsAssist:   assist,
 		}
 
-		// slot <= 3: strikers (positions 1-4)
-		// slot == 4: specials (positions 1-2)
+		// slot 0-3: strikers (positions 0-3)
+		// slot 4: specials (position 0-1, append sequentially)
 		if slot <= 3 {
-			strikers = append(strikers, character)
+			strikers[slot] = character
 		} else {
-			specials = append(specials, character)
+			// Find first empty special slot
+			for i := range 2 {
+				if specials[i].StudentID == 0 {
+					specials[i] = character
+					break
+				}
+			}
 		}
 	}
 
