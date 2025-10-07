@@ -5,21 +5,77 @@
 package postgres
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type BatormentV2Raid struct {
-	RaidID    string           `json:"raid_id"`
-	Name      string           `json:"name"`
-	ShortName string           `json:"short_name"`
-	Status    string           `json:"status"`
-	TopLevel  string           `json:"top_level"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	DeletedAt pgtype.Timestamp `json:"deleted_at"`
+type TopLevel string
+
+const (
+	TopLevelI TopLevel = "I"
+	TopLevelT TopLevel = "T"
+	TopLevelL TopLevel = "L"
+)
+
+func (e *TopLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TopLevel(s)
+	case string:
+		*e = TopLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TopLevel: %T", src)
+	}
+	return nil
 }
 
-type BatormentV2Student struct {
+type NullTopLevel struct {
+	TopLevel TopLevel `json:"top_level"`
+	Valid    bool     `json:"valid"` // Valid is true if TopLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTopLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.TopLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TopLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTopLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TopLevel), nil
+}
+
+type BatormentV3Content struct {
+	ContentID     string             `json:"content_id"`
+	Title         string             `json:"title"`
+	TopLevel      TopLevel           `json:"top_level"`
+	SearchKeyword string             `json:"search_keyword"`
+	StartDate     pgtype.Timestamptz `json:"start_date"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type BatormentV3Present struct {
+	PresentID int32            `json:"present_id"`
+	NameKo    string           `json:"name_ko"`
+	Rarity    string           `json:"rarity"`
+	Tags      []string         `json:"tags"`
+	ExpValue  int32            `json:"exp_value"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+}
+
+type BatormentV3Student struct {
 	StudentID     int32            `json:"student_id"`
 	NameKo        string           `json:"name_ko"`
 	NameJa        string           `json:"name_ja"`
@@ -27,17 +83,4 @@ type BatormentV2Student struct {
 	Detail        []byte           `json:"detail"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-}
-
-type BatormentV2Video struct {
-	ID                int32            `json:"id"`
-	RaidID            string           `json:"raid_id"`
-	Title             string           `json:"title"`
-	YoutubeUrl        string           `json:"youtube_url"`
-	Score             int32            `json:"score"`
-	AiGeneratedDetail []byte           `json:"ai_generated_detail"`
-	ParsedDetail      []byte           `json:"parsed_detail"`
-	CreatedAt         pgtype.Timestamp `json:"created_at"`
-	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
-	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
 }

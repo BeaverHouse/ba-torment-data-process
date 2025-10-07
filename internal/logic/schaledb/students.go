@@ -11,13 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
 	logic_download "ba-torment-data-process/internal/logic/download"
 	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"ba-torment-data-process/internal/types"
 )
-
-const schaleDBURL = "https://schaledb.com/"
 
 // Localization data structure
 type LocalizationRawData struct {
@@ -29,9 +28,10 @@ type JapaneseStudentInfo struct {
 	SearchTags []string `json:"SearchTags"`
 }
 
-// Reads /data/kr/localization.min.json file and returns BuffName map
-func loadBuffLocalization() map[string]string {
-	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/localization.min.json")
+// Reads /data/<lang>/localization.min.json file and returns BuffName map
+func loadLocalization(lang string) map[string]string {
+	url := fmt.Sprintf("%s/data/%s/localization.min.json", constants.SchaleDBURL, lang)
+	byteValue := logic_download.GetDataFromURL(url)
 
 	var locData LocalizationRawData
 	err := json.Unmarshal(byteValue, &locData)
@@ -45,12 +45,12 @@ func loadBuffLocalization() map[string]string {
 // Reads /data/jp/students.json file and returns Japanese student info map.
 // This is used to get student names in Japanese.
 func loadJapaneseStudentInfo() map[string]JapaneseStudentInfo {
-	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/jp/students.json")
+	byteValue := logic_download.GetDataFromURL(constants.SchaleDBURL + "/data/jp/students.json")
 
 	var studentData map[string]JapaneseStudentInfo
 	err := json.Unmarshal(byteValue, &studentData)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal localization: %v", err)
+		log.Fatalf("Failed to unmarshal student data: %v", err)
 	}
 
 	return studentData
@@ -178,7 +178,7 @@ var UnusedProperties = []string{
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
 
-	byteValue := logic_download.GetDataFromURL(schaleDBURL + "/data/kr/students.json")
+	byteValue := logic_download.GetDataFromURL(constants.SchaleDBURL + "/data/kr/students.json")
 
 	var rawData map[string]any
 	err := json.Unmarshal(byteValue, &rawData)
@@ -186,7 +186,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		log.Fatalf("Failed to unmarshal JSON: %v", err)
 	}
 
-	buffNames := loadBuffLocalization()
+	buffNames := loadLocalization("kr")
 	japaneseStudentInfo := loadJapaneseStudentInfo()
 
 	result := make(map[string]*types.StudentData)
@@ -376,7 +376,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 // Uploads the character image from SchaleDB via File Manager API.
 func uploadCharacterImage(id int, dryRun bool) error {
 
-	imgBytes := logic_download.GetDataFromURL(schaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
+	imgBytes := logic_download.GetDataFromURL(constants.SchaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
 
 	path := "batorment/character"
 

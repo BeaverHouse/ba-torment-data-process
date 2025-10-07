@@ -16,10 +16,6 @@ var (
 	fileUploadURL = "https://api.tinyclover.com/file-manager/v1"
 )
 
-func getAdminAPIKey() string {
-	return logic.GetEnv("FILEMANAGER_ADMIN_API_KEY", "")
-}
-
 // Uploads a file to the S3 via File Manager API.
 func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 	if dryRun {
@@ -48,7 +44,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 			log.Fatalf("API request failed: %v", err)
 		}
 
-		req.Header.Set("X-API-Key", getAdminAPIKey())
+		req.Header.Set("X-Access-Token", logic.GetEnv("FILEMANAGER_ADMIN_API_KEY", ""))
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		client := &http.Client{}

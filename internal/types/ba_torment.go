@@ -47,13 +47,23 @@ type Raid struct {
 	TopLevel  sql.NullString `json:"top_level"`
 }
 
-type NamedUser struct {
-	UserID      int            `json:"user_id"`
-	RaidID      sql.NullString `json:"raid_id"`
-	Description string         `json:"description"`
-	YouTubeURL  string         `json:"youtube_url"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	DeletedAt   sql.NullTime   `json:"deleted_at"`
-	Score       int            `json:"score"`
+// ********************************************
+// ********* BA Analyzer - Video Data *********
+// ********************************************
+
+// VideoAnalysisSummary represents a video analysis summary item
+type VideoAnalysisSummary struct {
+	VideoID     string  `json:"video_id"`
+	Score       int64   `json:"score"`
+	Title       string  `json:"title"`
+	RaidID      *string `json:"raid_id"`
+	CreatedAt   string  `json:"created_at"`
+	IsVerified  bool    `json:"is_verified"`
+	PartyData   [][]int `json:"party_data"`
+	VerifyLevel int     `json:"verify_level"`
+}
+
+// VideoAnalysisListResponse represents the response for video analysis list
+type VideoAnalysisListResponse struct {
+	Data []VideoAnalysisSummary `json:"data"`
 }

@@ -1,7 +1,6 @@
 package update
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -45,10 +44,6 @@ func UpdateData(dryRun bool) {
 	}
 	defer pool.Close()
 
-	// Create queries
-	queries := postgres.New(pool)
-	ctx := context.Background()
-
 	pendingRaids := []types.Raid{
 		{
 			RaidID: "S80-0",
@@ -81,8 +76,8 @@ func UpdateData(dryRun bool) {
 			log.Printf("UpdateData: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("v3/party", fileName, partyDataBytes, dryRun)
-		logic_upload.UploadFile("v3/filter", fileName, filterResultBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/party", fileName, partyDataBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/filter", fileName, filterResultBytes, dryRun)
 
 		// Create and upload lunatic filter
 		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
@@ -90,7 +85,7 @@ func UpdateData(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
 			log.Printf("루나틱 필터 업로드 완료: %s", raid.RaidID)
 		}
 
@@ -100,7 +95,7 @@ func UpdateData(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - non-lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
 			log.Printf("논루나틱 필터 업로드 완료: %s", raid.RaidID)
 		}
 
@@ -114,15 +109,49 @@ func UpdateData(dryRun bool) {
 			log.Printf("UpdateData: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("v3/summary", fileName, summaryDataBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/summary", fileName, summaryDataBytes, dryRun)
+	}
+}
 
-		if !dryRun {
-			err = queries.UpdateRaidStatusToComplete(ctx, raid.RaidID)
-			if err != nil {
-				log.Printf("UpdateData: %v", err)
-				continue
-			}
-			log.Printf("총력전 ID 업데이트 완료: %s", raid.RaidID)
+func UpdateVideoFilter(dryRun bool) {
+	defer func() {
+		log.Println("비디오 필터 업데이트 프로세스 완료")
+	}()
+
+	pendingRaids := []types.Raid{
+		{
+			RaidID: "3S22-1",
+			Name:   "테스트용",
+			Status: "PENDING",
+		},
+		{
+			RaidID: "3S22-2",
+			Name:   "테스트용",
+			Status: "PENDING",
+		},
+		{
+			RaidID: "3S22-3",
+			Name:   "테스트용",
+			Status: "PENDING",
+		},
+	}
+
+	if len(pendingRaids) == 0 {
+		log.Println("업데이트할 총력전 ID가 없습니다.")
+		return
+	}
+
+	for _, raid := range pendingRaids {
+		fileName := fmt.Sprintf("%s.json", raid.RaidID)
+
+		// Create and upload video filter
+		videoFilter := filter.CreateVideoFilter(raid.RaidID)
+		videoFilterBytes, err := json.Marshal(videoFilter)
+		if err != nil {
+			log.Printf("UpdateData - video filter: %v", err)
+		} else {
+			logic_upload.UploadFile("v3/video-filter", fileName, videoFilterBytes, dryRun)
+			log.Printf("비디오 필터 업로드 완료: %s", raid.RaidID)
 		}
 	}
 }

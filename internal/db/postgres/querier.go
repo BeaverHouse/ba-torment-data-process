@@ -6,15 +6,11 @@ package postgres
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	InsertPresent(ctx context.Context, arg InsertPresentParams) error
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
-	SoftDeleteOldRaids(ctx context.Context, createdAt pgtype.Timestamp) (pgconn.CommandTag, error)
-	UpdateRaidStatusToComplete(ctx context.Context, raidID string) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -4,5 +4,8 @@
 # Test files
 /app/tests/files/*
 
-# Arona AI data
+# Arona AI formatted data
 /data
+
+# DuckDB database
+*.db
