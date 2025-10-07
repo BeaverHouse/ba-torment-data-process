@@ -13,7 +13,7 @@ import (
 )
 
 func ParseDuckDB() error {
-	db, err := sql.Open("duckdb", "20250813.db?access_mode=READ_ONLY")
+	db, err := sql.Open("duckdb", "20250813.db")
 	if err != nil {
 		return fmt.Errorf("failed to open duckdb: %w", err)
 	}
