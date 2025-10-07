@@ -65,6 +65,16 @@ type BatormentV3Content struct {
 	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type BatormentV3Present struct {
+	PresentID int32            `json:"present_id"`
+	NameKo    string           `json:"name_ko"`
+	Rarity    string           `json:"rarity"`
+	Tags      []string         `json:"tags"`
+	ExpValue  int32            `json:"exp_value"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+}
+
 type BatormentV3Student struct {
 	StudentID     int32            `json:"student_id"`
 	NameKo        string           `json:"name_ko"`

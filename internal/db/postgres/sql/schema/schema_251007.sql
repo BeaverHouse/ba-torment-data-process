@@ -27,7 +27,21 @@ CREATE TABLE batorment_v3.students (
     updated_at TIMESTAMP
 );
 
+-- Table for presents in Blue Archive
+CREATE TABLE batorment_v3.presents (
+    present_id INTEGER NOT NULL PRIMARY KEY,
+    name_ko VARCHAR(50) NOT NULL,
+    rarity VARCHAR(10) NOT NULL,
+    tags VARCHAR(50)[] NOT NULL,
+    exp_value INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_students_name ON batorment_v3.students(name_ko);
 CREATE INDEX IF NOT EXISTS idx_students_name_ja ON batorment_v3.students(name_ja);
 CREATE INDEX IF NOT EXISTS idx_students_details ON batorment_v3.students USING GIN (detail);
+CREATE INDEX IF NOT EXISTS idx_presents_name ON batorment_v3.presents(name_ko);
+CREATE INDEX IF NOT EXISTS idx_presents_tags ON batorment_v3.presents USING GIN (tags);
+

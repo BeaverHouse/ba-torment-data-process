@@ -38,5 +38,10 @@ func main() {
 		log.Fatalf("Failed to parse SchaleDB students: %v", err)
 	}
 
+	_, err = schaledb.ParseSchaleDBPresents(queries)
+	if err != nil {
+		log.Fatalf("Failed to parse SchaleDB presents: %v", err)
+	}
+
 	log.Println("Successfully parsed SchaleDB students")
 }

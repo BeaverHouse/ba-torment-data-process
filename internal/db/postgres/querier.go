@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	InsertPresent(ctx context.Context, arg InsertPresentParams) error
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
 }
 
