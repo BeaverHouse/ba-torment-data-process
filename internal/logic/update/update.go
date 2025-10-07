@@ -76,8 +76,8 @@ func UpdateData(dryRun bool) {
 			log.Printf("UpdateData: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("v3/party", fileName, partyDataBytes, dryRun)
-		logic_upload.UploadFile("v3/filter", fileName, filterResultBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/party", fileName, partyDataBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/filter", fileName, filterResultBytes, dryRun)
 
 		// Create and upload lunatic filter
 		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
@@ -85,7 +85,7 @@ func UpdateData(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
 			log.Printf("루나틱 필터 업로드 완료: %s", raid.RaidID)
 		}
 
@@ -95,7 +95,7 @@ func UpdateData(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - non-lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
 			log.Printf("논루나틱 필터 업로드 완료: %s", raid.RaidID)
 		}
 
@@ -109,7 +109,7 @@ func UpdateData(dryRun bool) {
 			log.Printf("UpdateData: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("v3/summary", fileName, summaryDataBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/summary", fileName, summaryDataBytes, dryRun)
 	}
 }
 
