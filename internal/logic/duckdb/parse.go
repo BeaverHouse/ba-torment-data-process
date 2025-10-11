@@ -17,13 +17,13 @@ import (
 func ParseDuckDB(contentID string, startDate time.Time) error {
 	dateString := startDate.Format("20060102")
 
-	db, err := sql.Open("duckdb", fmt.Sprintf("../../%s.db", dateString))
+	db, err := sql.Open("duckdb", fmt.Sprintf("%s.db", dateString))
 	if err != nil {
 		return fmt.Errorf("failed to open duckdb: %w", err)
 	}
 	defer db.Close()
 
-	if err := os.MkdirAll("../../data", 0755); err != nil {
+	if err := os.MkdirAll("data", 0755); err != nil {
 		return fmt.Errorf("failed to create data directory: %w", err)
 	}
 
@@ -47,7 +47,7 @@ func ParseDuckDB(contentID string, startDate time.Time) error {
 		return fmt.Errorf("failed to marshal json for %s: %w", armorType, err)
 	}
 
-	filename := fmt.Sprintf("../../data/%s.json", contentID)
+	filename := fmt.Sprintf("data/%s.json", contentID)
 	if err := os.WriteFile(filename, jsonData, 0644); err != nil {
 		return fmt.Errorf("failed to write json file for %s: %w", armorType, err)
 	}
