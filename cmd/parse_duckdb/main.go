@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic"
 	logic_duckdb "ba-torment-data-process/internal/logic/duckdb"
+	"ba-torment-data-process/internal/logic/filter"
+	"ba-torment-data-process/internal/logic/parse"
+	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"ba-torment-data-process/internal/types"
 
 	"github.com/joho/godotenv"
@@ -25,6 +29,8 @@ func main() {
 			log.Fatalf("Failed to load .env file: %v", err)
 		}
 	}
+
+	dryRun := true
 
 	// Initialize database connection
 	postgresConfig := types.PostgresConfig{
@@ -47,10 +53,69 @@ func main() {
 		if err != nil {
 			log.Fatal(fmt.Errorf("failed to get raid info: %w", err))
 		}
+
+		// Step 1: Parse DuckDB to Arona.AI format
 		if err := logic_duckdb.ParseDuckDB(raidInfo.ContentID, raidInfo.StartDate.Time); err != nil {
 			log.Fatal(fmt.Errorf("failed to parse duckdb: %w", err))
 		}
+
+		// Step 2: Parse Arona.AI format to final formats
+		fileName := fmt.Sprintf("%s.json", raidInfo.ContentID)
+
+		// Get party data and filters from Arona AI
+		partyData, filterResult := parse.ParsePartyDataFromAronaAI(raidInfo.ContentID)
+
+		// Upload party data
+		partyDataBytes, err := json.Marshal(partyData)
+		if err != nil {
+			log.Printf("Failed to marshal party data: %v", err)
+			continue
+		}
+		logic_upload.UploadFile("batorment/v3/party", fileName, partyDataBytes, dryRun)
+
+		// Upload filter
+		filterResultBytes, err := json.Marshal(filterResult)
+		if err != nil {
+			log.Printf("Failed to marshal filter result: %v", err)
+			continue
+		}
+		logic_upload.UploadFile("batorment/v3/filter", fileName, filterResultBytes, dryRun)
+
+		// Create and upload lunatic filter
+		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
+		lunaticFilterBytes, err := json.Marshal(lunaticFilter)
+		if err != nil {
+			log.Printf("Failed to create lunatic filter: %v", err)
+		} else {
+			logic_upload.UploadFile("batorment/v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
+			log.Printf("루나틱 필터 업로드 완료: %s", raidInfo.ContentID)
+		}
+
+		// Create and upload non-lunatic filter
+		nonLunaticFilter := filter.CreateNonLunaticFilter(partyData, filterResult)
+		nonLunaticFilterBytes, err := json.Marshal(nonLunaticFilter)
+		if err != nil {
+			log.Printf("Failed to create non-lunatic filter: %v", err)
+		} else {
+			logic_upload.UploadFile("batorment/v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
+			log.Printf("논루나틱 필터 업로드 완료: %s", raidInfo.ContentID)
+		}
+
+		// Create and upload summary data
+		summaryData, err := parse.ProcessPartyDataToSummaryData(partyData)
+		if err != nil {
+			log.Printf("Failed to process summary data: %v", err)
+			continue
+		}
+		summaryDataBytes, err := json.Marshal(summaryData)
+		if err != nil {
+			log.Printf("Failed to marshal summary data: %v", err)
+			continue
+		}
+		logic_upload.UploadFile("batorment/v3/summary", fileName, summaryDataBytes, dryRun)
+
+		log.Printf("Successfully processed raid: %s", raidInfo.ContentID)
 	}
 
-	fmt.Println("Successfully parsed DuckDB data")
+	fmt.Println("Successfully parsed and processed all raids")
 }
