@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
 
 	_ "github.com/marcboeker/go-duckdb"
@@ -26,34 +27,29 @@ func ParseDuckDB(contentID string, startDate time.Time) error {
 		return fmt.Errorf("failed to create data directory: %w", err)
 	}
 
-	armorTypes := []string{"Light", "Heavy", "Special", "Elastic"}
+	_, category := logic.SplitSeasonString(contentID)
 
-	for _, armorType := range armorTypes {
-		armorTypeID, exists := constants.ArmorTypeMapping[armorType]
-		if !exists {
-			continue
-		}
+	armorType := constants.ArmorTypeMapping[category]
 
-		details, err := processArmorType(db, armorType)
-		if err != nil {
-			continue
-		}
+	details, err := processArmorType(db, armorType)
+	if err != nil {
+		return fmt.Errorf("failed to process armor type: %w", err)
+	}
 
-		if len(details) == 0 {
-			continue
-		}
+	if len(details) == 0 {
+		return fmt.Errorf("no details found for armor type: %s", armorType)
+	}
 
-		result := types.AronaAIData{D: details}
+	result := types.AronaAIData{D: details}
 
-		jsonData, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal json for %s: %w", armorType, err)
-		}
+	jsonData, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal json for %s: %w", armorType, err)
+	}
 
-		filename := fmt.Sprintf("../../data/%d.json", armorTypeID)
-		if err := os.WriteFile(filename, jsonData, 0644); err != nil {
-			return fmt.Errorf("failed to write json file for %s: %w", armorType, err)
-		}
+	filename := fmt.Sprintf("../../data/%s.json", contentID)
+	if err := os.WriteFile(filename, jsonData, 0644); err != nil {
+		return fmt.Errorf("failed to write json file for %s: %w", armorType, err)
 	}
 
 	return nil
