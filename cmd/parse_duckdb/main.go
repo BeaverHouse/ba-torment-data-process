@@ -54,16 +54,13 @@ func main() {
 			log.Fatal(fmt.Errorf("failed to get raid info: %w", err))
 		}
 
-		// Step 1: Parse DuckDB to Arona.AI format
-		if err := logic_duckdb.ParseDuckDB(raidInfo.ContentID, raidInfo.StartDate.Time); err != nil {
+		// Parse DuckDB directly to final format
+		partyData, filterResult, err := logic_duckdb.ParseDuckDB(raidInfo.ContentID, raidInfo.StartDate.Time)
+		if err != nil {
 			log.Fatal(fmt.Errorf("failed to parse duckdb: %w", err))
 		}
 
-		// Step 2: Parse Arona.AI format to final formats
 		fileName := fmt.Sprintf("%s.json", raidInfo.ContentID)
-
-		// Get party data and filters from Arona AI
-		partyData, filterResult := parse.ParsePartyDataFromAronaAI(raidInfo.ContentID)
 
 		// Upload party data
 		partyDataBytes, err := json.Marshal(partyData)
