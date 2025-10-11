@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/types"
@@ -12,8 +13,10 @@ import (
 	_ "github.com/marcboeker/go-duckdb"
 )
 
-func ParseDuckDB() error {
-	db, err := sql.Open("duckdb", "../../20250813.db")
+func ParseDuckDB(contentID string, startDate time.Time) error {
+	dateString := startDate.Format("20060102")
+
+	db, err := sql.Open("duckdb", fmt.Sprintf("../../%s.db", dateString))
 	if err != nil {
 		return fmt.Errorf("failed to open duckdb: %w", err)
 	}
