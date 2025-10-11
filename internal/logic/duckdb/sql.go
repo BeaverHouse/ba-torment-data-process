@@ -2,28 +2,38 @@ package logic_duckdb
 
 import "fmt"
 
-const duckDBName = "20250813.main"
-
 func GetCompleteRunIDAndScoreSQL(armorType string) string {
+	columnName := "point"
+	if armorType != "" {
+		columnName = armorType + "_point"
+	}
 	return fmt.Sprintf(`
-SELECT crunid, cr.%s_point
+SELECT crunid, cr.%s
 FROM complete_runs cr
-ORDER BY cr.%s_point DESC
-`, armorType, armorType)
+ORDER BY cr.%s DESC
+`, columnName, columnName)
 }
 
 func GetRunIDsByCompleteRunIDSQL(armorType string, completeRunID int) string {
+	tableName := "runs"
+	if armorType != "" {
+		tableName = "runs_" + armorType
+	}
 	return fmt.Sprintf(`
 SELECT r.runid
-FROM runs_%s r
+FROM %s r
 WHERE r.crunid = %d
-`, armorType, completeRunID)
+`, tableName, completeRunID)
 }
 
 func GetPartyInfoByRunIDSQL(armorType string, runID int) string {
+	tableName := "students"
+	if armorType != "" {
+		tableName = "students_" + armorType
+	}
 	return fmt.Sprintf(`
 SELECT sid, build, level, slot, assist
-FROM students_%s
+FROM %s
 WHERE runid = %d
-`, armorType, runID)
+`, tableName, runID)
 }
