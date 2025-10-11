@@ -10,6 +10,9 @@ deploy:
     # Postgres password
     - secretKey: "POSTGRES_PASSWORD"
       remoteRef: "SUPABASE_POSTGRES_PASSWORD"
-    # API key for personal file manager API.
-    - secretKey: "FILEMANAGER_ADMIN_API_KEY"
-      remoteRef: "FILEMANAGER_ADMIN_API_KEY"
+    # Service key for personal file manager API.
+    - secretKey: "FILE_MANAGER_SERVICE_API_KEY"
+      remoteRef: "FILE_MANAGER_SERVICE_API_KEY"
+    # Service key for BA Analyzer API.
+    - secretKey: "BA_ANALYZER_SERVICE_API_KEY"
+      remoteRef: "BA_ANALYZER_SERVICE_API_KEY"
