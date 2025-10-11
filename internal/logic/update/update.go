@@ -7,7 +7,6 @@ import (
 
 	"ba-torment-data-process/internal/logic/filter"
 	logic_upload "ba-torment-data-process/internal/logic/upload"
-	"ba-torment-data-process/internal/types"
 )
 
 func UpdateVideoFilter(dryRun bool) {
@@ -15,22 +14,10 @@ func UpdateVideoFilter(dryRun bool) {
 		log.Println("비디오 필터 업데이트 프로세스 완료")
 	}()
 
-	pendingRaids := []types.Raid{
-		{
-			RaidID: "3S22-1",
-			Name:   "테스트용",
-			Status: "PENDING",
-		},
-		{
-			RaidID: "3S22-2",
-			Name:   "테스트용",
-			Status: "PENDING",
-		},
-		{
-			RaidID: "3S22-3",
-			Name:   "테스트용",
-			Status: "PENDING",
-		},
+	pendingRaids := []string{
+		"3S22-1",
+		"3S22-2",
+		"3S22-3",
 	}
 
 	if len(pendingRaids) == 0 {
@@ -39,16 +26,16 @@ func UpdateVideoFilter(dryRun bool) {
 	}
 
 	for _, raid := range pendingRaids {
-		fileName := fmt.Sprintf("%s.json", raid.RaidID)
+		fileName := fmt.Sprintf("%s.json", raid)
 
 		// Create and upload video filter
-		videoFilter := filter.CreateVideoFilter(raid.RaidID)
+		videoFilter := filter.CreateVideoFilter(raid)
 		videoFilterBytes, err := json.Marshal(videoFilter)
 		if err != nil {
 			log.Printf("UpdateData - video filter: %v", err)
 		} else {
 			logic_upload.UploadFile("v3/video-filter", fileName, videoFilterBytes, dryRun)
-			log.Printf("비디오 필터 업로드 완료: %s", raid.RaidID)
+			log.Printf("비디오 필터 업로드 완료: %s", raid)
 		}
 	}
 }
