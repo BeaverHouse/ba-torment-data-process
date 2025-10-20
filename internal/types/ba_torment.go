@@ -1,10 +1,5 @@
 package types
 
-import (
-	"database/sql"
-	"time"
-)
-
 type BATormentFilter struct {
 	Filters       map[string](map[string]int) `json:"filters"`
 	AssistFilters map[string](map[string]int) `json:"assistFilters"`
@@ -31,20 +26,6 @@ type BATormentLevelData struct {
 	ClearCount  int              `json:"clearCount"`
 	PartyCounts map[string][]int `json:"partyCounts"`
 	Top5Partys  [][]any          `json:"top5Partys"`
-}
-
-// *******************************
-// ********** DB Schema **********
-// *******************************
-
-type Raid struct {
-	RaidID    string         `json:"raid_id"`
-	Name      string         `json:"name"`
-	Status    string         `json:"status"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
-	DeletedAt sql.NullTime   `json:"deleted_at"`
-	TopLevel  sql.NullString `json:"top_level"`
 }
 
 // ********************************************

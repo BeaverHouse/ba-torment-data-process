@@ -1,11 +1,12 @@
 package constants
 
 var (
-	ArmorTypeMapping = map[string]int{
-		"Light":   1,
-		"Heavy":   2,
-		"Special": 3,
-		"Elastic": 4,
+	ArmorTypeMapping = map[int]string{
+		0: "",
+		1: "Light",
+		2: "Heavy",
+		3: "Special",
+		4: "Elastic",
 	}
 	WeaponStarMapping = map[string]int{
 		"one":   10,

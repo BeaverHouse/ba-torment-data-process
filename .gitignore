@@ -9,3 +9,6 @@
 
 # DuckDB database
 *.db
+
+# Temp files
+.DS_store
