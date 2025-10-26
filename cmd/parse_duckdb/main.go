@@ -19,7 +19,9 @@ import (
 
 var (
 	raids = []string{
-		"S82-0",
+		"3S27-1",
+		"3S27-3",
+		"3S27-4",
 	}
 )
 
@@ -30,7 +32,7 @@ func main() {
 		}
 	}
 
-	dryRun := true
+	dryRun := false
 
 	// Initialize database connection
 	postgresConfig := types.PostgresConfig{

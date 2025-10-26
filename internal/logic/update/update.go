@@ -18,6 +18,12 @@ func UpdateVideoFilter(dryRun bool) {
 		"3S22-1",
 		"3S22-2",
 		"3S22-3",
+		"3S23-1",
+		"3S23-2",
+		"3S23-3",
+		"S78-0",
+		"S79-0",
+		"S82-0",
 	}
 
 	if len(pendingRaids) == 0 {
