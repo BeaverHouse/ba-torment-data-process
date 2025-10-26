@@ -104,8 +104,10 @@ func CreateVideoFilter(raidID string) *types.BATormentFilter {
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
 
-	// Filter parties with score >= LunaticMinScore
 	for _, analysis := range data.Data.Data {
+		if !analysis.IsVerified {
+			continue
+		}
 		for _, partyTeam := range analysis.PartyData {
 			for _, studentDetailID := range partyTeam {
 				if studentDetailID != 0 {
