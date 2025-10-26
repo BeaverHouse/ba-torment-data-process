@@ -40,7 +40,7 @@ func UpdateVideoFilter(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - video filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/video-filter", fileName, videoFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/video-filter", fileName, videoFilterBytes, dryRun)
 			log.Printf("비디오 필터 업로드 완료: %s", raid)
 		}
 	}
