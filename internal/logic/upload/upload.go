@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -58,6 +59,10 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 			body, _ := io.ReadAll(resp.Body)
 			log.Fatalf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body))
 		}
+
+		log.Println("File uploaded successfully: ", fileName)
+		time.Sleep(2 * time.Second)
+
 		return nil
 	}
 }
