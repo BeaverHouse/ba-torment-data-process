@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
@@ -317,8 +316,6 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 			return nil, err
 		}
 		log.Printf("Student %s (%s) processed", studentID, completeData.Name)
-
-		time.Sleep(3 * time.Second)
 	}
 
 	studentMapBytes, err := json.Marshal(studentMap)

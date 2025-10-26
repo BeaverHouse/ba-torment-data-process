@@ -74,6 +74,11 @@ func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, 
 	maxPartys := 0
 
 	for rank, run := range runs {
+		// Skip data with score 0
+		if run.score == 0 {
+			break
+		}
+
 		// Step 2: Get run IDs by complete run ID
 		partyData, err := getPartiesByCompleteRunID(db, armorType, run.completeRunID)
 		if err != nil {

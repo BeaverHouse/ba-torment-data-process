@@ -18,6 +18,12 @@ func UpdateVideoFilter(dryRun bool) {
 		"3S22-1",
 		"3S22-2",
 		"3S22-3",
+		"3S23-1",
+		"3S23-2",
+		"3S23-3",
+		"S78-0",
+		"S79-0",
+		"S82-0",
 	}
 
 	if len(pendingRaids) == 0 {
@@ -34,7 +40,7 @@ func UpdateVideoFilter(dryRun bool) {
 		if err != nil {
 			log.Printf("UpdateData - video filter: %v", err)
 		} else {
-			logic_upload.UploadFile("v3/video-filter", fileName, videoFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/video-filter", fileName, videoFilterBytes, dryRun)
 			log.Printf("비디오 필터 업로드 완료: %s", raid)
 		}
 	}
