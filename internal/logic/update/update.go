@@ -9,22 +9,10 @@ import (
 	logic_upload "ba-torment-data-process/internal/logic/upload"
 )
 
-func UpdateVideoFilter(dryRun bool) {
+func UpdateVideoFilter(dryRun bool, pendingRaids []string) {
 	defer func() {
 		log.Println("비디오 필터 업데이트 프로세스 완료")
 	}()
-
-	pendingRaids := []string{
-		"3S22-1",
-		"3S22-2",
-		"3S22-3",
-		"3S23-1",
-		"3S23-2",
-		"3S23-3",
-		"S78-0",
-		"S79-0",
-		"S82-0",
-	}
 
 	if len(pendingRaids) == 0 {
 		log.Println("업데이트할 총력전 ID가 없습니다.")

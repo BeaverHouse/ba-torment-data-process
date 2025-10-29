@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 
@@ -32,7 +33,8 @@ func main() {
 		}
 	}
 
-	dryRun := false
+	dryRun := flag.Bool("dry-run", false, "Run in dry-run mode (no actual uploads)")
+	flag.Parse()
 
 	// Initialize database connection
 	postgresConfig := types.PostgresConfig{
@@ -70,7 +72,7 @@ func main() {
 			log.Printf("Failed to marshal party data: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("batorment/v3/party", fileName, partyDataBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/party", fileName, partyDataBytes, *dryRun)
 
 		// Upload filter
 		filterResultBytes, err := json.Marshal(filterResult)
@@ -78,7 +80,7 @@ func main() {
 			log.Printf("Failed to marshal filter result: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("batorment/v3/filter", fileName, filterResultBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/filter", fileName, filterResultBytes, *dryRun)
 
 		// Create and upload lunatic filter
 		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
@@ -86,7 +88,7 @@ func main() {
 		if err != nil {
 			log.Printf("Failed to create lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("batorment/v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/lunatic-filter", fileName, lunaticFilterBytes, *dryRun)
 			log.Printf("루나틱 필터 업로드 완료: %s", raidInfo.ContentID)
 		}
 
@@ -96,7 +98,7 @@ func main() {
 		if err != nil {
 			log.Printf("Failed to create non-lunatic filter: %v", err)
 		} else {
-			logic_upload.UploadFile("batorment/v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
+			logic_upload.UploadFile("batorment/v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, *dryRun)
 			log.Printf("논루나틱 필터 업로드 완료: %s", raidInfo.ContentID)
 		}
 
@@ -111,7 +113,7 @@ func main() {
 			log.Printf("Failed to marshal summary data: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("batorment/v3/summary", fileName, summaryDataBytes, dryRun)
+		logic_upload.UploadFile("batorment/v3/summary", fileName, summaryDataBytes, *dryRun)
 
 		log.Printf("Successfully processed raid: %s", raidInfo.ContentID)
 	}
