@@ -11,20 +11,15 @@ import (
 	"net/http"
 )
 
-func CreateLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFilter {
+// createFilterFromPartyTeams creates a filter from a list of party teams
+func createFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
 
-	// Filter parties with score >= LunaticMinScore
-	for _, party := range partyData.PartyDetail {
-		if party.Score >= constants.LunaticMinScore {
-			// Process each party's characters
-			for _, partyTeam := range party.PartyData {
-				for _, studentDetailID := range partyTeam {
-					if studentDetailID != 0 {
-						logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
-					}
-				}
+	for _, partyTeam := range partyTeams {
+		for _, studentDetailID := range partyTeam {
+			if studentDetailID != 0 {
+				logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
 			}
 		}
 	}
@@ -35,9 +30,21 @@ func CreateLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFi
 	}
 }
 
+func CreateLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFilter {
+	var partyTeams [][6]int
+
+	// Filter parties with score >= LunaticMinScore
+	for _, party := range partyData.PartyDetail {
+		if party.Score >= constants.LunaticMinScore {
+			partyTeams = append(partyTeams, party.PartyData...)
+		}
+	}
+
+	return createFilterFromPartyTeams(partyTeams)
+}
+
 func CreateNonLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFilter {
-	filters := make(map[string](map[string]int))
-	assistFilters := make(map[string](map[string]int))
+	var partyTeams [][6]int
 
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
@@ -49,21 +56,11 @@ func CreateNonLunaticFilter(partyData *types.BATormentPartyData) *types.BATormen
 			minScore = 0
 		}
 		if party.Score >= minScore && party.Score < maxScore {
-			// Process each party's characters
-			for _, partyTeam := range party.PartyData {
-				for _, studentDetailID := range partyTeam {
-					if studentDetailID != 0 {
-						logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
-					}
-				}
-			}
+			partyTeams = append(partyTeams, party.PartyData...)
 		}
 	}
 
-	return &types.BATormentFilter{
-		Filters:       filters,
-		AssistFilters: assistFilters,
-	}
+	return createFilterFromPartyTeams(partyTeams)
 }
 
 func CreateVideoFilter(raidID string) *types.BATormentFilter {
@@ -101,24 +98,19 @@ func CreateVideoFilter(raidID string) *types.BATormentFilter {
 		return nil
 	}
 
-	filters := make(map[string](map[string]int))
-	assistFilters := make(map[string](map[string]int))
+	var partyTeams [][6]int
 
 	for _, analysis := range data.Data.Data {
 		if !analysis.IsVerified {
 			continue
 		}
-		for _, partyTeam := range analysis.PartyData {
-			for _, studentDetailID := range partyTeam {
-				if studentDetailID != 0 {
-					logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
-				}
-			}
+		// Convert [][]int to [][6]int
+		for _, party := range analysis.PartyData {
+			var team [6]int
+			copy(team[:], party)
+			partyTeams = append(partyTeams, team)
 		}
 	}
 
-	return &types.BATormentFilter{
-		Filters:       filters,
-		AssistFilters: assistFilters,
-	}
+	return createFilterFromPartyTeams(partyTeams)
 }
