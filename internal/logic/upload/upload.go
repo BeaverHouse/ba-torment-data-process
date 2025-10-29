@@ -3,6 +3,7 @@ package logic_upload
 import (
 	"ba-torment-data-process/internal/logic"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -16,6 +17,26 @@ import (
 var (
 	fileUploadURL = "https://api.tinyclover.com/file-manager/v1"
 )
+
+// Marshals data to JSON and uploads it.
+// If successMsg is not empty, it will be logged after successful upload.
+func MarshalAndUpload(data any, path, fileName string, dryRun bool, successMsg string) error {
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	err = UploadFile(path, fileName, dataBytes, dryRun)
+	if err != nil {
+		return fmt.Errorf("failed to upload file: %w", err)
+	}
+
+	if successMsg != "" {
+		log.Println(successMsg)
+	}
+
+	return nil
+}
 
 // Uploads a file to the S3 via File Manager API.
 func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
