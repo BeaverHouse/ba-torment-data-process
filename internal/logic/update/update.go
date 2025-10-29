@@ -14,11 +14,6 @@ func UpdateVideoFilter(dryRun bool, pendingRaids []string) {
 		log.Println("비디오 필터 업데이트 프로세스 완료")
 	}()
 
-	if len(pendingRaids) == 0 {
-		log.Println("업데이트할 총력전 ID가 없습니다.")
-		return
-	}
-
 	for _, raid := range pendingRaids {
 		fileName := fmt.Sprintf("%s.json", raid)
 
