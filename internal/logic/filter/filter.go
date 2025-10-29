@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-func CreateLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATormentFilter) *types.BATormentFilter {
+func CreateLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFilter {
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
 
@@ -35,7 +35,7 @@ func CreateLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATorment
 	}
 }
 
-func CreateNonLunaticFilter(partyData *types.BATormentPartyData, _ *types.BATormentFilter) *types.BATormentFilter {
+func CreateNonLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFilter {
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
 

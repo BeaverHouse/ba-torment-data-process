@@ -40,14 +40,6 @@ func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.
 
 // processLevelData는 각 레벨의 데이터를 처리합니다.
 func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCount, tormentCount int) types.BATormentLevelData {
-	if len(data) == 0 {
-		return types.BATormentLevelData{
-			ClearCount:  len(data),
-			PartyCounts: make(map[string][]int),
-			Top5Partys:  make([][]any, 0),
-		}
-	}
-
 	result := types.BATormentLevelData{
 		ClearCount:  len(data),
 		PartyCounts: make(map[string][]int),
@@ -86,6 +78,11 @@ func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCo
 
 	// 파티 목록을 정렬
 	sort.Strings(parties)
+
+	// 빈 배열이면 조기 종료
+	if len(parties) == 0 {
+		return result
+	}
 
 	type partyUsage struct {
 		key   string

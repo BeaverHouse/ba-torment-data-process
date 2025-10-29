@@ -83,7 +83,7 @@ func main() {
 		logic_upload.UploadFile("batorment/v3/filter", fileName, filterResultBytes, *dryRun)
 
 		// Create and upload lunatic filter
-		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
+		lunaticFilter := filter.CreateLunaticFilter(partyData)
 		lunaticFilterBytes, err := json.Marshal(lunaticFilter)
 		if err != nil {
 			log.Printf("Failed to create lunatic filter: %v", err)
@@ -93,7 +93,7 @@ func main() {
 		}
 
 		// Create and upload non-lunatic filter
-		nonLunaticFilter := filter.CreateNonLunaticFilter(partyData, filterResult)
+		nonLunaticFilter := filter.CreateNonLunaticFilter(partyData)
 		nonLunaticFilterBytes, err := json.Marshal(nonLunaticFilter)
 		if err != nil {
 			log.Printf("Failed to create non-lunatic filter: %v", err)
