@@ -263,14 +263,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		log.Printf("Student %s (%s) processed", studentID, completeData.Name)
 	}
 
-	studentMapBytes, err := json.Marshal(studentMap)
-	if err != nil {
-		log.Printf("Failed to marshal student map: %v", err)
-		return nil, err
-	}
-
-	err = logic_upload.UploadFile("batorment/v3", "student-map.json", studentMapBytes, false)
-	if err != nil {
+	if err := logic_upload.MarshalAndUpload(studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
 		log.Printf("Failed to upload student map: %v", err)
 		return nil, err
 	}
@@ -300,14 +293,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		}
 	}
 
-	studentSearchMapBytes, err := json.Marshal(studentSearchMap)
-	if err != nil {
-		log.Printf("Failed to marshal student search map: %v", err)
-		return nil, err
-	}
-
-	err = logic_upload.UploadFile("batorment/v3", "student-search-map.json", studentSearchMapBytes, false)
-	if err != nil {
+	if err := logic_upload.MarshalAndUpload(studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
 		log.Printf("Failed to upload student search map: %v", err)
 		return nil, err
 	}

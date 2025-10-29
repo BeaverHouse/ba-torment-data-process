@@ -1,7 +1,6 @@
 package update
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -19,12 +18,8 @@ func UpdateVideoFilter(dryRun bool, pendingRaids []string) {
 
 		// Create and upload video filter
 		videoFilter := filter.CreateVideoFilter(raid)
-		videoFilterBytes, err := json.Marshal(videoFilter)
-		if err != nil {
-			log.Printf("UpdateData - video filter: %v", err)
-		} else {
-			logic_upload.UploadFile("batorment/v3/video-filter", fileName, videoFilterBytes, dryRun)
-			log.Printf("비디오 필터 업로드 완료: %s", raid)
+		if err := logic_upload.MarshalAndUpload(videoFilter, "batorment/v3/video-filter", fileName, dryRun, fmt.Sprintf("비디오 필터 업로드 완료: %s", raid)); err != nil {
+			log.Printf("Failed to upload video filter: %v", err)
 		}
 	}
 }
