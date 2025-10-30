@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-// createFilterFromPartyTeams creates a filter from a list of party teams
+// createFilterFromPartyTeams creates a filter from a list of party teams for summary data
 func createFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
@@ -20,6 +20,25 @@ func createFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
 		for _, studentDetailID := range partyTeam {
 			if studentDetailID != 0 {
 				logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
+			}
+		}
+	}
+
+	return &types.BATormentFilter{
+		Filters:       filters,
+		AssistFilters: assistFilters,
+	}
+}
+
+// createVideoFilterFromPartyTeams creates a filter from a list of party teams for video data
+func createVideoFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
+	filters := make(map[string](map[string]int))
+	assistFilters := make(map[string](map[string]int))
+
+	for _, partyTeam := range partyTeams {
+		for _, studentDetailID := range partyTeam {
+			if studentDetailID != 0 {
+				logic.UpdatePartyFilters(filters, assistFilters, studentDetailID)
 			}
 		}
 	}
@@ -112,5 +131,5 @@ func CreateVideoFilter(raidID string) *types.BATormentFilter {
 		}
 	}
 
-	return createFilterFromPartyTeams(partyTeams)
+	return createVideoFilterFromPartyTeams(partyTeams)
 }
