@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 
@@ -12,7 +12,6 @@ import (
 	"ba-torment-data-process/internal/logic/filter"
 	"ba-torment-data-process/internal/logic/parse"
 	logic_upload "ba-torment-data-process/internal/logic/upload"
-	"ba-torment-data-process/internal/types"
 
 	"github.com/joho/godotenv"
 )
@@ -32,21 +31,11 @@ func main() {
 		}
 	}
 
-	dryRun := false
+	dryRun := flag.Bool("dry-run", false, "Run in dry-run mode (no actual uploads)")
+	flag.Parse()
 
 	// Initialize database connection
-	postgresConfig := types.PostgresConfig{
-		Host:     logic.GetEnv("POSTGRES_HOST", "localhost"),
-		Port:     logic.GetIntEnv("POSTGRES_PORT", 5432),
-		User:     logic.GetEnv("POSTGRES_USER", "postgres"),
-		Password: logic.GetEnv("POSTGRES_PASSWORD", "postgres"),
-		DBName:   logic.GetEnv("POSTGRES_DB", "postgres"),
-		SSLMode:  logic.GetEnv("POSTGRES_SSLMODE", "disable"),
-	}
-	pool, err := postgres.NewPool(postgresConfig)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+	pool := postgres.InitFromEnv()
 	defer pool.Close()
 
 	queries := postgres.New(pool)
@@ -65,39 +54,27 @@ func main() {
 		fileName := fmt.Sprintf("%s.json", raidInfo.ContentID)
 
 		// Upload party data
-		partyDataBytes, err := json.Marshal(partyData)
-		if err != nil {
-			log.Printf("Failed to marshal party data: %v", err)
+		if err := logic_upload.MarshalAndUpload(partyData, "batorment/v3/party", fileName, *dryRun, ""); err != nil {
+			log.Printf("Failed to upload party data: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("batorment/v3/party", fileName, partyDataBytes, dryRun)
 
 		// Upload filter
-		filterResultBytes, err := json.Marshal(filterResult)
-		if err != nil {
-			log.Printf("Failed to marshal filter result: %v", err)
+		if err := logic_upload.MarshalAndUpload(filterResult, "batorment/v3/filter", fileName, *dryRun, ""); err != nil {
+			log.Printf("Failed to upload filter: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("batorment/v3/filter", fileName, filterResultBytes, dryRun)
 
 		// Create and upload lunatic filter
-		lunaticFilter := filter.CreateLunaticFilter(partyData, filterResult)
-		lunaticFilterBytes, err := json.Marshal(lunaticFilter)
-		if err != nil {
-			log.Printf("Failed to create lunatic filter: %v", err)
-		} else {
-			logic_upload.UploadFile("batorment/v3/lunatic-filter", fileName, lunaticFilterBytes, dryRun)
-			log.Printf("루나틱 필터 업로드 완료: %s", raidInfo.ContentID)
+		lunaticFilter := filter.CreateLunaticFilter(partyData)
+		if err := logic_upload.MarshalAndUpload(lunaticFilter, "batorment/v3/lunatic-filter", fileName, *dryRun, fmt.Sprintf("루나틱 필터 업로드 완료: %s", raidInfo.ContentID)); err != nil {
+			log.Printf("Failed to upload lunatic filter: %v", err)
 		}
 
 		// Create and upload non-lunatic filter
-		nonLunaticFilter := filter.CreateNonLunaticFilter(partyData, filterResult)
-		nonLunaticFilterBytes, err := json.Marshal(nonLunaticFilter)
-		if err != nil {
-			log.Printf("Failed to create non-lunatic filter: %v", err)
-		} else {
-			logic_upload.UploadFile("batorment/v3/nonlunatic-filter", fileName, nonLunaticFilterBytes, dryRun)
-			log.Printf("논루나틱 필터 업로드 완료: %s", raidInfo.ContentID)
+		nonLunaticFilter := filter.CreateNonLunaticFilter(partyData)
+		if err := logic_upload.MarshalAndUpload(nonLunaticFilter, "batorment/v3/nonlunatic-filter", fileName, *dryRun, fmt.Sprintf("논루나틱 필터 업로드 완료: %s", raidInfo.ContentID)); err != nil {
+			log.Printf("Failed to upload non-lunatic filter: %v", err)
 		}
 
 		// Create and upload summary data
@@ -106,12 +83,10 @@ func main() {
 			log.Printf("Failed to process summary data: %v", err)
 			continue
 		}
-		summaryDataBytes, err := json.Marshal(summaryData)
-		if err != nil {
-			log.Printf("Failed to marshal summary data: %v", err)
+		if err := logic_upload.MarshalAndUpload(summaryData, "batorment/v3/summary", fileName, *dryRun, ""); err != nil {
+			log.Printf("Failed to upload summary data: %v", err)
 			continue
 		}
-		logic_upload.UploadFile("batorment/v3/summary", fileName, summaryDataBytes, dryRun)
 
 		log.Printf("Successfully processed raid: %s", raidInfo.ContentID)
 	}

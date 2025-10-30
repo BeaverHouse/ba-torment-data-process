@@ -144,36 +144,6 @@ func processValueField(effectMap map[string]any) {
 	}
 }
 
-// UnusedProperties defines fields to remove from raw SchaleDB data
-var UnusedProperties = []string{
-	"Id",
-	"IsReleased", // Release status
-	"DefaultOrder",
-	"PathName",
-	"Icon",            // Icon
-	"WeaponImg",       // Weapon image
-	"Cover",           // Cover
-	"Size",            // Size (type when appearing as enemy)
-	"CollectionBG",    // Background
-	"CharacterSSRNew", // Dialogue when joining
-	"Illustrator",     // Illustrator
-	"Designer",        // Designer
-	"CharacterVoice",  // Voice actor
-	"CharHeightImperial",
-	"AmmoCost",              // Ammo cost
-	"AmmoCount",             // Ammo count
-	"MemoryLobby",           // Memorial unlock rank
-	"MemoryLobbyBGM",        // Memorial BGM
-	"SkillExMaterial",       // EX skill enhancement material
-	"SkillExMaterialAmount", // EX skill enhancement material amount
-	"SkillMaterial",         // Skill enhancement material
-	"SkillMaterialAmount",   // Skill enhancement material amount
-	"PotentialMaterial",     // Potential material
-	"RegenCost",             // Cost recovery speed (fixed at 700)
-	"CriticalDamageRate",    // Critical damage rate (fixed at 20000, 200%)
-	"Birthday",              // Birthday (duplicate)
-}
-
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
 
@@ -198,34 +168,11 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 			continue
 		}
 
-		// Remove unused properties
-		for _, property := range UnusedProperties {
-			delete(dataMap, property)
-		}
-
-		// Process Gear data
-		if gear, ok := dataMap["Gear"]; ok {
-			if gearMap, ok := gear.(map[string]any); ok {
-				delete(gearMap, "TierUpMaterial")
-				delete(gearMap, "TierUpMaterialAmount")
-				delete(gearMap, "Desc")
-				delete(gearMap, "Released")
-			}
-		}
-
 		// Process Skills data
 		if skills, ok := dataMap["Skills"]; ok {
 			if skillsMap, ok := skills.(map[string]any); ok {
-				delete(skillsMap, "Normal")
-
 				for _, skill := range skillsMap {
 					if skillMap, ok := skill.(map[string]any); ok {
-						delete(skillMap, "Icon")
-						delete(skillMap, "Name")
-						delete(skillMap, "Duration")
-						delete(skillMap, "Range")
-						delete(skillMap, "Radius")
-
 						// Process Effects
 						if effects, ok := skillMap["Effects"]; ok {
 							if effectsSlice, ok := effects.([]any); ok {
@@ -267,8 +214,6 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 									}
 								}
 							}
-							// Delete Parameters after processing
-							delete(skillMap, "Parameters")
 						}
 					}
 				}
@@ -318,14 +263,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		log.Printf("Student %s (%s) processed", studentID, completeData.Name)
 	}
 
-	studentMapBytes, err := json.Marshal(studentMap)
-	if err != nil {
-		log.Printf("Failed to marshal student map: %v", err)
-		return nil, err
-	}
-
-	err = logic_upload.UploadFile("batorment/v3", "student-map.json", studentMapBytes, false)
-	if err != nil {
+	if err := logic_upload.MarshalAndUpload(studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
 		log.Printf("Failed to upload student map: %v", err)
 		return nil, err
 	}
@@ -355,14 +293,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		}
 	}
 
-	studentSearchMapBytes, err := json.Marshal(studentSearchMap)
-	if err != nil {
-		log.Printf("Failed to marshal student search map: %v", err)
-		return nil, err
-	}
-
-	err = logic_upload.UploadFile("batorment/v3", "student-search-map.json", studentSearchMapBytes, false)
-	if err != nil {
+	if err := logic_upload.MarshalAndUpload(studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
 		log.Printf("Failed to upload student search map: %v", err)
 		return nil, err
 	}
