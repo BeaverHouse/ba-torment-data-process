@@ -30,7 +30,7 @@ func main() {
 		}
 	}
 
-	dryRun := flag.Bool("dry-run", true, "Run in dry-run mode (no actual uploads)")
+	dryRun := flag.Bool("dry-run", false, "Run in dry-run mode (no actual uploads)")
 	flag.Parse()
 
 	update.UpdateVideoFilter(*dryRun, pendingRaids)
