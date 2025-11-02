@@ -11,6 +11,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AnalysisType string
+
+const (
+	AnalysisTypeAi   AnalysisType = "ai"
+	AnalysisTypeUser AnalysisType = "user"
+)
+
+func (e *AnalysisType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AnalysisType(s)
+	case string:
+		*e = AnalysisType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AnalysisType: %T", src)
+	}
+	return nil
+}
+
+type NullAnalysisType struct {
+	AnalysisType AnalysisType `json:"analysis_type"`
+	Valid        bool         `json:"valid"` // Valid is true if AnalysisType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAnalysisType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AnalysisType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AnalysisType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAnalysisType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AnalysisType), nil
+}
+
 type TopLevel string
 
 const (
@@ -83,4 +125,17 @@ type BatormentV3Student struct {
 	Detail        []byte           `json:"detail"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+}
+
+type BatormentV3YoutubeAnalysis struct {
+	ID             int32              `json:"id"`
+	VideoID        string             `json:"video_id"`
+	RaidID         string             `json:"raid_id"`
+	AnalysisResult []byte             `json:"analysis_result"`
+	AnalysisType   AnalysisType       `json:"analysis_type"`
+	Version        int32              `json:"version"`
+	IsVerified     bool               `json:"is_verified"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
 }
