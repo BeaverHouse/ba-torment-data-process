@@ -15,6 +15,7 @@ type BATormentPartyDetail struct {
 	Rank      int      `json:"rank"`
 	Score     int      `json:"score"`
 	PartyData [][6]int `json:"partyData"`
+	VideoID   *string  `json:"video_id,omitempty"`
 }
 
 type BATormentSummaryData struct {
@@ -47,4 +48,12 @@ type VideoAnalysisSummary struct {
 // VideoAnalysisListResponse represents the response for video analysis list
 type VideoAnalysisListResponse struct {
 	Data []VideoAnalysisSummary `json:"data"`
+}
+
+// YoutubeAnalysisResult represents the analysis_result JSONB field in youtube_analysis table
+type YoutubeAnalysisResult struct {
+	URL         string   `json:"url"`
+	Score       int      `json:"score"`
+	PartyData   [][6]int `json:"partyData"`
+	SkillOrders []any    `json:"skillOrders"`
 }

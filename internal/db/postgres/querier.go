@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	GetContents(ctx context.Context, contentID string) (GetContentsRow, error)
+	GetVerifiedYoutubeAnalysisByRaidID(ctx context.Context, raidID string) ([]GetVerifiedYoutubeAnalysisByRaidIDRow, error)
 	InsertPresent(ctx context.Context, arg InsertPresentParams) error
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
 }

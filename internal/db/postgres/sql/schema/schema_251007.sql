@@ -4,6 +4,22 @@ CREATE SCHEMA IF NOT EXISTS batorment_v3;
 -- Enum for top level
 CREATE TYPE top_level AS ENUM ('I', 'T', 'L'); -- Insane, Torment, Lunatic
 
+-- Enum for analysis type
+CREATE TYPE analysis_type AS ENUM ('ai', 'user');
+
+create table batorment_v3.youtube_analysis (
+  id SERIAL PRIMARY KEY,
+  video_id VARCHAR(255) NOT NULL,
+  raid_id VARCHAR(10) NOT NULL,
+  analysis_result JSONB NOT NULL,
+  analysis_type analysis_type NOT NULL,
+  version INTEGER NOT NULL,
+  is_verified BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ
+);
+
 -- Table for contents in Blue Archive
 create table batorment_v3.contents (
   content_id VARCHAR(10) NOT NULL,
