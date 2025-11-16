@@ -48,7 +48,8 @@ func main() {
 		// Parse DuckDB directly to final format
 		partyData, filterResult, err := logic_duckdb.ParseDuckDB(raidInfo.ContentID, raidInfo.StartDate.Time)
 		if err != nil {
-			log.Fatal(fmt.Errorf("failed to parse duckdb: %w", err))
+			log.Printf("Skipping raid %s: %v", raid, err)
+			continue
 		}
 
 		fileName := fmt.Sprintf("%s.json", raidInfo.ContentID)

@@ -3,6 +3,10 @@ package logic_duckdb
 import (
 	"database/sql"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
 	"sort"
 	"time"
 
@@ -13,10 +17,55 @@ import (
 	_ "github.com/marcboeker/go-duckdb"
 )
 
+// downloadDuckDB downloads the DuckDB file from CloudFront
+func downloadDuckDB(dateString string) error {
+	baseURL := os.Getenv("BATORMENT_DUCKDB_REMOTE_URL")
+	if baseURL == "" {
+		return fmt.Errorf("BATORMENT_DUCKDB_REMOTE_URL environment variable is not set")
+	}
+
+	url := fmt.Sprintf("%s/v1/JP/%s.db", baseURL, dateString)
+	fileName := fmt.Sprintf("%s.db", dateString)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to download from %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download: HTTP %d from %s", resp.StatusCode, url)
+	}
+
+	out, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("failed to create file %s: %w", fileName, err)
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		os.Remove(fileName) // Clean up incomplete file
+		return fmt.Errorf("failed to write file %s: %w", fileName, err)
+	}
+
+	return nil
+}
+
 func ParseDuckDB(contentID string, startDate time.Time) (*types.BATormentPartyData, *types.BATormentFilter, error) {
 	dateString := startDate.Format("20060102")
+	dbFileName := fmt.Sprintf("%s.db", dateString)
 
-	db, err := sql.Open("duckdb", fmt.Sprintf("%s.db", dateString))
+	// Check if DuckDB file exists, if not, try to download it
+	if _, err := os.Stat(dbFileName); os.IsNotExist(err) {
+		log.Printf("DuckDB file %s not found, attempting to download...", dbFileName)
+		if err := downloadDuckDB(dateString); err != nil {
+			log.Printf("Info: Failed to download DuckDB file %s: %v. Skipping this raid.", dbFileName, err)
+			return nil, nil, fmt.Errorf("duckdb file not available: %w", err)
+		}
+		log.Printf("Successfully downloaded DuckDB file: %s", dbFileName)
+	}
+
+	db, err := sql.Open("duckdb", dbFileName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to open duckdb: %w", err)
 	}
