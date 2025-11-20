@@ -78,6 +78,48 @@ func UpdateVideoRef(dryRun bool, raidIDs []string) {
 	}
 }
 
+// UpdateVideoRefWithData updates video references for party data without downloading from S3
+// This function is designed to be used in integrated pipelines where partyData is already in memory
+func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) (int, error) {
+	// Connect to database
+	pool := postgres.InitFromEnv()
+	defer pool.Close()
+
+	ctx := context.Background()
+	queries := postgres.New(pool)
+
+	// Get verified YouTube analysis from database
+	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query YouTube analysis: %w", err)
+	}
+
+	if len(analysisRows) == 0 {
+		log.Printf("No verified YouTube analysis found for %s", raidID)
+		return 0, nil
+	}
+
+	// Parse analysis results
+	analysisResults := make([]types.YoutubeAnalysisResult, 0, len(analysisRows))
+	videoIDMap := make(map[int]string) // index -> video_id
+
+	for idx, row := range analysisRows {
+		var result types.YoutubeAnalysisResult
+		if err := json.Unmarshal(row.AnalysisResult, &result); err != nil {
+			log.Printf("Failed to unmarshal analysis result: %v", err)
+			continue
+		}
+		analysisResults = append(analysisResults, result)
+		videoIDMap[idx] = row.VideoID
+	}
+
+	// Match and update video references
+	updated := matchAndUpdateVideoRefs(partyData, analysisResults, videoIDMap)
+	log.Printf("Updated %d video references for raid %s", updated, raidID)
+
+	return updated, nil
+}
+
 // downloadPartyData downloads party data from Supabase storage
 func downloadPartyData(raidID string) (*types.BATormentPartyData, error) {
 	url := fmt.Sprintf("%s/%s.json", supabaseStorageURL, raidID)

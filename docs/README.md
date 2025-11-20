@@ -1,5 +1,9 @@
 # Documentation
 
+## Commands
+
+See [Commands documentation](./commands.md) for available commands and usage guide.
+
 ## Data structure
 
 1. [Arona AI data](./data-arona-ai.md)
