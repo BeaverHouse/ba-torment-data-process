@@ -14,6 +14,7 @@ import (
 	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
 
+	"github.com/andybalholm/brotli"
 	_ "github.com/marcboeker/go-duckdb"
 )
 
@@ -27,7 +28,23 @@ func downloadDuckDB(dateString string) error {
 	url := fmt.Sprintf("%s/v1/JP/%s.db", baseURL, dateString)
 	fileName := fmt.Sprintf("%s.db", dateString)
 
-	resp, err := http.Get(url)
+	log.Printf("Downloading DuckDB from: %s", url)
+
+	// Create HTTP client that accepts Brotli encoding
+	client := &http.Client{
+		Timeout: 5 * time.Minute,
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Accept Brotli encoding (CloudFront sends Brotli-compressed files)
+	req.Header.Set("Accept-Encoding", "br, gzip, deflate")
+	req.Header.Set("User-Agent", "ba-torment-data-process/1.0")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to download from %s: %w", url, err)
 	}
@@ -37,15 +54,37 @@ func downloadDuckDB(dateString string) error {
 		return fmt.Errorf("failed to download: HTTP %d from %s", resp.StatusCode, url)
 	}
 
+	contentEncoding := resp.Header.Get("Content-Encoding")
+	log.Printf("Response Content-Type: %s, Content-Length: %d, Content-Encoding: %s",
+		resp.Header.Get("Content-Type"), resp.ContentLength, contentEncoding)
+
+	// Create output file
 	out, err := os.Create(fileName)
 	if err != nil {
 		return fmt.Errorf("failed to create file %s: %w", fileName, err)
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(out, resp.Body); err != nil {
+	// Decompress if Brotli encoded
+	var reader io.Reader = resp.Body
+	if contentEncoding == "br" {
+		log.Printf("Decompressing Brotli-encoded file...")
+		reader = brotli.NewReader(resp.Body)
+	}
+
+	// Copy (and decompress) to file
+	written, err := io.Copy(out, reader)
+	if err != nil {
 		os.Remove(fileName) // Clean up incomplete file
 		return fmt.Errorf("failed to write file %s: %w", fileName, err)
+	}
+
+	log.Printf("Downloaded and wrote %d bytes (%.2f MB) to %s", written, float64(written)/(1024*1024), fileName)
+
+	// Verify minimum file size (DuckDB files should be substantial)
+	if written < 10240 { // At least 10KB
+		os.Remove(fileName)
+		return fmt.Errorf("downloaded file is too small (%d bytes), likely not a valid DuckDB file", written)
 	}
 
 	return nil
