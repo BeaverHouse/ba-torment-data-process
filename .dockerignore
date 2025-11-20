@@ -1,0 +1,59 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+LICENSE
+CONTRIBUTING.md
+SECURITY.md
+CODE_OF_CONDUCT.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test files
+*_test.go
+test/
+tests/
+
+# DuckDB files (downloaded at runtime)
+*.db
+
+# Environment files
+.env
+.env.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.log
+
+# HAR files
+*.har
+
+# Node modules (if any)
+node_modules/
+
+# Coverage
+*.out
+coverage/
