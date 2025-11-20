@@ -9,10 +9,11 @@ import (
 )
 
 type Querier interface {
-	GetContents(ctx context.Context, contentID string) (GetContentsRow, error)
+	GetContentByID(ctx context.Context, contentID string) (GetContentByIDRow, error)
 	GetVerifiedYoutubeAnalysisByRaidID(ctx context.Context, raidID string) ([]GetVerifiedYoutubeAnalysisByRaidIDRow, error)
 	InsertPresent(ctx context.Context, arg InsertPresentParams) error
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
+	ListContentIDs(ctx context.Context) ([]string, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -17,17 +17,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var (
-	raids = []string{
-		"3S26-1",
-		"3S26-2",
-		"3S26-4",
-		"3S28-1",
-		"3S28-3",
-		"3S28-4",
-	}
-)
-
 func main() {
 	if logic.IsLocalEnv() {
 		if err := godotenv.Load(); err != nil {
@@ -43,55 +32,61 @@ func main() {
 	defer pool.Close()
 
 	queries := postgres.New(pool)
-	for _, raid := range raids {
-		log.Printf("\n=== Processing raid: %s ===", raid)
 
-		raidInfo, err := queries.GetContents(context.Background(), raid)
+	contentIDs, err := queries.ListContentIDs(context.Background())
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed to list content IDs: %w", err))
+	}
+
+	for _, contentID := range contentIDs {
+		log.Printf("\n=== Processing content: %s ===", contentID)
+
+		contentInfo, err := queries.GetContentByID(context.Background(), contentID)
 		if err != nil {
-			log.Fatal(fmt.Errorf("failed to get raid info: %w", err))
+			log.Fatal(fmt.Errorf("failed to get content info: %w", err))
 		}
 
 		// Step 1: Parse DuckDB to create party data
-		log.Printf("[1/6] Parsing DuckDB for %s...", raidInfo.ContentID)
-		partyData, filterResult, err := logic_duckdb.ParseDuckDB(raidInfo.ContentID, raidInfo.StartDate.Time)
+		log.Printf("[1/6] Parsing DuckDB for %s...", contentID)
+		partyData, filterResult, err := logic_duckdb.ParseDuckDB(contentID, contentInfo.StartDate.Time)
 		if err != nil {
-			log.Printf("Skipping raid %s: %v", raid, err)
+			log.Printf("Skipping content %s: %v", contentID, err)
 			continue
 		}
 
-		fileName := fmt.Sprintf("%s.json", raidInfo.ContentID)
+		fileName := fmt.Sprintf("%s.json", contentID)
 
 		// Step 2: Update video references (without S3 download)
-		log.Printf("[2/6] Updating video references for %s...", raidInfo.ContentID)
-		updated, err := videoref.UpdateVideoRefWithData(partyData, raidInfo.ContentID)
+		log.Printf("[2/6] Updating video references for %s...", contentID)
+		updated, err := videoref.UpdateVideoRefWithData(partyData, contentID)
 		if err != nil {
-			log.Printf("Warning: Failed to update video refs for %s: %v", raidInfo.ContentID, err)
+			log.Printf("Warning: Failed to update video refs for %s: %v", contentID, err)
 			// Continue even if video ref update fails
 		} else {
-			log.Printf("Updated %d video references for %s", updated, raidInfo.ContentID)
+			log.Printf("Updated %d video references for %s", updated, contentID)
 		}
 
 		// Step 3: Upload party data (with video refs if updated)
-		log.Printf("[3/6] Uploading party data for %s...", raidInfo.ContentID)
+		log.Printf("[3/6] Uploading party data for %s...", contentID)
 		if err := logic_upload.MarshalAndUpload(partyData, "batorment/v3/party", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload party data: %v", err)
 			continue
 		}
 
 		// Step 4: Create and upload video filter
-		log.Printf("[4/6] Creating and uploading video filter for %s...", raidInfo.ContentID)
-		videoFilter := filter.CreateVideoFilter(raidInfo.ContentID)
+		log.Printf("[4/6] Creating and uploading video filter for %s...", contentID)
+		videoFilter := filter.CreateVideoFilter(contentID)
 		if videoFilter != nil {
 			if err := logic_upload.MarshalAndUpload(videoFilter, "batorment/v3/video-filter", fileName, *dryRun, ""); err != nil {
 				log.Printf("Warning: Failed to upload video filter: %v", err)
 				// Continue even if video filter upload fails
 			}
 		} else {
-			log.Printf("Warning: No video filter created for %s", raidInfo.ContentID)
+			log.Printf("Warning: No video filter created for %s", contentID)
 		}
 
 		// Step 5: Upload additional filters
-		log.Printf("[5/6] Uploading additional filters for %s...", raidInfo.ContentID)
+		log.Printf("[5/6] Uploading additional filters for %s...", contentID)
 
 		// Upload basic filter
 		if err := logic_upload.MarshalAndUpload(filterResult, "batorment/v3/filter", fileName, *dryRun, ""); err != nil {
@@ -112,7 +107,7 @@ func main() {
 		}
 
 		// Step 6: Create and upload summary data
-		log.Printf("[6/6] Processing and uploading summary data for %s...", raidInfo.ContentID)
+		log.Printf("[6/6] Processing and uploading summary data for %s...", contentID)
 		summaryData, err := parse.ProcessPartyDataToSummaryData(partyData)
 		if err != nil {
 			log.Printf("Failed to process summary data: %v", err)
@@ -123,7 +118,7 @@ func main() {
 			continue
 		}
 
-		log.Printf("✓ Successfully processed raid: %s\n", raidInfo.ContentID)
+		log.Printf("✓ Successfully processed content: %s\n", contentID)
 	}
 
 	fmt.Println("\n=== Successfully processed all raids ===")
