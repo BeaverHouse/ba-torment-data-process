@@ -54,7 +54,7 @@ docker run --rm --env-file .env ba-torment-data-process:latest
 
 The Dockerfile uses multi-stage builds for optimization:
 
-1. **Builder stage** (golang:1.23-alpine):
+1. **Builder stage** (golang:1.25.2-alpine):
    - Installs build dependencies
    - Downloads Go modules
    - Builds both binaries
