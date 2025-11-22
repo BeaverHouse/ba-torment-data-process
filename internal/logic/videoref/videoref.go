@@ -2,93 +2,53 @@ package videoref
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 
 	"ba-torment-data-process/internal/db/postgres"
-	logic_download "ba-torment-data-process/internal/logic/download"
-	logic_upload "ba-torment-data-process/internal/logic/upload"
 	"ba-torment-data-process/internal/types"
 )
 
 const (
-	supabaseStorageURL = "https://twauaebyyujvvvusbrwe.supabase.co/storage/v1/object/public/pb7h4uvn2b6m0lyu7i6r3j8ac/batorment/v3/party"
-	hoshinoMusoCodeA   = 10098
-	hoshinoMusoCodeB   = 10099
+	hoshinoMusoCodeA = 10098
+	hoshinoMusoCodeB = 10099
 )
 
-// UpdateVideoRef updates video references for party data based on verified YouTube analysis
-func UpdateVideoRef(dryRun bool, raidIDs []string) {
-	defer func() {
-		log.Println("비디오 ref 업데이트 프로세스 완료")
-	}()
-
-	// Connect to database using existing init function
+// Updates video references for party data (directly from DuckDB)
+// This function is designed to be used in integrated pipelines where partyData is already in memory
+func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) (int, error) {
+	// Connect to database
 	pool := postgres.InitFromEnv()
 	defer pool.Close()
 
 	ctx := context.Background()
 	queries := postgres.New(pool)
 
-	for _, raidID := range raidIDs {
-		log.Printf("Processing raid: %s", raidID)
-
-		// 1. Download party data from Supabase
-		partyData, err := downloadPartyData(raidID)
-		if err != nil {
-			log.Printf("Failed to download party data for %s: %v", raidID, err)
-			continue
-		}
-
-		// 2. Get verified YouTube analysis from database
-		analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
-		if err != nil {
-			log.Printf("Failed to query YouTube analysis for %s: %v", raidID, err)
-			continue
-		}
-
-		if len(analysisRows) == 0 {
-			log.Printf("No verified YouTube analysis found for %s", raidID)
-			continue
-		}
-
-		// 3. Parse analysis results
-		analysisResults := make([]types.YoutubeAnalysisResult, 0, len(analysisRows))
-		videoIDMap := make(map[int]string) // index -> video_id
-
-		for idx, row := range analysisRows {
-			var result types.YoutubeAnalysisResult
-			if err := json.Unmarshal(row.AnalysisResult, &result); err != nil {
-				log.Printf("Failed to unmarshal analysis result: %v", err)
-				continue
-			}
-			analysisResults = append(analysisResults, result)
-			videoIDMap[idx] = row.VideoID
-		}
-
-		// 4. Match and update video references
-		updated := matchAndUpdateVideoRefs(partyData, analysisResults, videoIDMap)
-
-		// 5. Upload updated party data
-		fileName := fmt.Sprintf("%s.json", raidID)
-		if err := logic_upload.MarshalAndUpload(partyData, "batorment/v3/party", fileName, dryRun, fmt.Sprintf("파티 데이터 video ref 업데이트 완료: %s (updated: %d)", raidID, updated)); err != nil {
-			log.Printf("Failed to upload party data for %s: %v", raidID, err)
-		}
-	}
-}
-
-// downloadPartyData downloads party data from Supabase storage
-func downloadPartyData(raidID string) (*types.BATormentPartyData, error) {
-	url := fmt.Sprintf("%s/%s.json", supabaseStorageURL, raidID)
-	data := logic_download.GetDataFromURL(url)
-
-	var partyData types.BATormentPartyData
-	if err := json.Unmarshal(data, &partyData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal party data: %w", err)
+	// Get verified YouTube analysis from database
+	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query YouTube analysis: %w", err)
 	}
 
-	return &partyData, nil
+	if len(analysisRows) == 0 {
+		log.Printf("No verified YouTube analysis found for %s", raidID)
+		return 0, nil
+	}
+
+	// Parse analysis results
+	analysisResults := make([]types.YoutubeAnalysisResult, 0, len(analysisRows))
+	videoIDMap := make(map[int]string) // index -> video_id
+
+	for idx, row := range analysisRows {
+		analysisResults = append(analysisResults, row.AnalysisResult)
+		videoIDMap[idx] = row.VideoID
+	}
+
+	// Match and update video references
+	updated := matchAndUpdateVideoRefs(partyData, analysisResults, videoIDMap)
+	log.Printf("Updated %d video references for raid %s", updated, raidID)
+
+	return updated, nil
 }
 
 // matchAndUpdateVideoRefs matches YouTube analysis with party data and updates video references

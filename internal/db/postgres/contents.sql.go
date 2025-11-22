@@ -11,18 +11,42 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getContents = `-- name: GetContents :one
+const getContentByID = `-- name: GetContentByID :one
 SELECT content_id, start_date FROM batorment_v3.contents WHERE content_id = $1
 `
 
-type GetContentsRow struct {
+type GetContentByIDRow struct {
 	ContentID string             `json:"content_id"`
 	StartDate pgtype.Timestamptz `json:"start_date"`
 }
 
-func (q *Queries) GetContents(ctx context.Context, contentID string) (GetContentsRow, error) {
-	row := q.db.QueryRow(ctx, getContents, contentID)
-	var i GetContentsRow
+func (q *Queries) GetContentByID(ctx context.Context, contentID string) (GetContentByIDRow, error) {
+	row := q.db.QueryRow(ctx, getContentByID, contentID)
+	var i GetContentByIDRow
 	err := row.Scan(&i.ContentID, &i.StartDate)
 	return i, err
+}
+
+const listContentIDs = `-- name: ListContentIDs :many
+SELECT content_id FROM batorment_v3.contents WHERE deleted_at IS NULL
+`
+
+func (q *Queries) ListContentIDs(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listContentIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var content_id string
+		if err := rows.Scan(&content_id); err != nil {
+			return nil, err
+		}
+		items = append(items, content_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

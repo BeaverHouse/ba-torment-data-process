@@ -1,5 +1,13 @@
 # Documentation
 
+## Commands
+
+See [Commands documentation](./commands.md) for available commands and usage guide.
+
+## Deployment
+
+See [Docker deployment guide](./docker.md) for containerized deployment instructions.
+
 ## Data structure
 
 1. [Arona AI data](./data-arona-ai.md)

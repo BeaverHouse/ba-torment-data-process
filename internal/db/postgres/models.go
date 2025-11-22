@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	types "ba-torment-data-process/internal/types"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -128,14 +129,14 @@ type BatormentV3Student struct {
 }
 
 type BatormentV3YoutubeAnalysis struct {
-	ID             int32              `json:"id"`
-	VideoID        string             `json:"video_id"`
-	RaidID         string             `json:"raid_id"`
-	AnalysisResult []byte             `json:"analysis_result"`
-	AnalysisType   AnalysisType       `json:"analysis_type"`
-	Version        int32              `json:"version"`
-	IsVerified     bool               `json:"is_verified"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+	ID             int32                       `json:"id"`
+	VideoID        string                      `json:"video_id"`
+	RaidID         string                      `json:"raid_id"`
+	AnalysisResult types.YoutubeAnalysisResult `json:"analysis_result"`
+	AnalysisType   AnalysisType                `json:"analysis_type"`
+	Version        int32                       `json:"version"`
+	IsVerified     bool                        `json:"is_verified"`
+	CreatedAt      pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz          `json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz          `json:"deleted_at"`
 }

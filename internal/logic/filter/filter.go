@@ -1,14 +1,13 @@
 package filter
 
 import (
+	"context"
+	"log"
+
 	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
 )
 
 // createFilterFromPartyTeams creates a filter from a list of party teams for summary data
@@ -82,54 +81,36 @@ func CreateNonLunaticFilter(partyData *types.BATormentPartyData) *types.BATormen
 	return createFilterFromPartyTeams(partyTeams)
 }
 
+// CreateVideoFilter creates a video filter from verified YouTube analysis data in the database
 func CreateVideoFilter(raidID string) *types.BATormentFilter {
-	url := "https://api.tinyclover.com/ba-analyzer/v1/video/analysis?raid_id=" + raidID + "&page=1&limit=1000"
+	// Connect to database
+	pool := postgres.InitFromEnv()
+	defer pool.Close()
 
-	serviceToken := logic.GetEnv("BA_ANALYZER_SERVICE_API_KEY", "")
+	ctx := context.Background()
+	queries := postgres.New(pool)
 
-	req, err := http.NewRequest(
-		http.MethodGet,
-		url,
-		nil,
-	)
+	// Get verified YouTube analysis from database
+	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
 	if err != nil {
+		log.Printf("Failed to query YouTube analysis for %s: %v", raidID, err)
 		return nil
 	}
 
-	req.Header.Set("X-Access-Token", serviceToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("API request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("API request failed: %v", err)
-	}
-
-	fmt.Println(string(body))
-
-	var data types.APIResponse[types.VideoAnalysisListResponse]
-	if err := json.Unmarshal(body, &data); err != nil {
+	if len(analysisRows) == 0 {
+		log.Printf("No verified YouTube analysis found for %s", raidID)
 		return nil
 	}
 
 	var partyTeams [][6]int
 
-	for _, analysis := range data.Data.Data {
-		if !analysis.IsVerified {
-			continue
-		}
-		// Convert [][]int to [][6]int
-		for _, party := range analysis.PartyData {
-			var team [6]int
-			copy(team[:], party)
-			partyTeams = append(partyTeams, team)
-		}
+	// Parse analysis results and extract party data
+	for _, row := range analysisRows {
+		partyTeams = append(partyTeams, row.AnalysisResult.PartyData...)
 	}
+
+	log.Printf("Created video filter for %s with %d party teams from %d verified videos",
+		raidID, len(partyTeams), len(analysisRows))
 
 	return createVideoFilterFromPartyTeams(partyTeams)
 }

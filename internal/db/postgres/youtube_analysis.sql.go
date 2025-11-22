@@ -8,6 +8,7 @@ package postgres
 import (
 	"context"
 
+	types "ba-torment-data-process/internal/types"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -21,15 +22,15 @@ ORDER BY created_at DESC
 `
 
 type GetVerifiedYoutubeAnalysisByRaidIDRow struct {
-	ID             int32              `json:"id"`
-	VideoID        string             `json:"video_id"`
-	RaidID         string             `json:"raid_id"`
-	AnalysisResult []byte             `json:"analysis_result"`
-	AnalysisType   AnalysisType       `json:"analysis_type"`
-	Version        int32              `json:"version"`
-	IsVerified     bool               `json:"is_verified"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID             int32                       `json:"id"`
+	VideoID        string                      `json:"video_id"`
+	RaidID         string                      `json:"raid_id"`
+	AnalysisResult types.YoutubeAnalysisResult `json:"analysis_result"`
+	AnalysisType   AnalysisType                `json:"analysis_type"`
+	Version        int32                       `json:"version"`
+	IsVerified     bool                        `json:"is_verified"`
+	CreatedAt      pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz          `json:"updated_at"`
 }
 
 func (q *Queries) GetVerifiedYoutubeAnalysisByRaidID(ctx context.Context, raidID string) ([]GetVerifiedYoutubeAnalysisByRaidIDRow, error) {
