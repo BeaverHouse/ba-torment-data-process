@@ -2,7 +2,6 @@ package videoref
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -41,12 +40,7 @@ func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) 
 	videoIDMap := make(map[int]string) // index -> video_id
 
 	for idx, row := range analysisRows {
-		var result types.YoutubeAnalysisResult
-		if err := json.Unmarshal(row.AnalysisResult, &result); err != nil {
-			log.Printf("Failed to unmarshal analysis result: %v", err)
-			continue
-		}
-		analysisResults = append(analysisResults, result)
+		analysisResults = append(analysisResults, row.AnalysisResult)
 		videoIDMap[idx] = row.VideoID
 	}
 
