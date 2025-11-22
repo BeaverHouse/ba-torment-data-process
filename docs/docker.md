@@ -54,15 +54,15 @@ docker run --rm --env-file .env ba-torment-data-process:latest
 
 The Dockerfile uses multi-stage builds for optimization:
 
-1. **Builder stage** (golang:1.25.2-alpine):
-   - Installs build dependencies
+1. **Builder stage** (golang:1.25.2-bookworm):
    - Downloads Go modules
    - Builds both binaries
+   - Uses Debian Bookworm for glibc compatibility with DuckDB
 
-2. **Runtime stage** (alpine:latest):
-   - Minimal Alpine Linux base
+2. **Runtime stage** (debian:bookworm-slim):
+   - Minimal Debian base with glibc
    - Only includes runtime dependencies and compiled binaries
-   - Significantly smaller image size
+   - Optimized for size while maintaining DuckDB compatibility
 
 ### Entrypoint Script
 
@@ -221,8 +221,9 @@ docker system prune -a
 
 - **Build time**: Multi-stage build takes 2-5 minutes depending on network speed
 - **Runtime**: Depends on number of raids to process (typically 5-15 minutes)
-- **Image size**: ~50-100MB (compressed), ~150-250MB (uncompressed)
+- **Image size**: ~80-120MB (compressed), ~200-300MB (uncompressed)
 - **Memory usage**: Peak ~500MB-1GB during DuckDB processing
+- **Note**: Uses Debian base instead of Alpine for DuckDB glibc compatibility
 
 ## Security
 

@@ -1,8 +1,5 @@
 # Build stage
-FROM golang:1.25.2-alpine AS builder
-
-# Install build dependencies
-RUN apk add --no-cache git gcc g++ musl-dev
+FROM golang:1.25.2-bookworm AS builder
 
 WORKDIR /app
 
@@ -18,10 +15,13 @@ RUN go build -o /app/bin/process_raid ./cmd/process_raid
 RUN go build -o /app/bin/update_from_schaledb ./cmd/update_from_schaledb
 
 # Runtime stage
-FROM alpine:latest
+FROM debian:bookworm-slim
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
