@@ -37,7 +37,6 @@ docker run --rm \
   -e AWS_SECRET_ACCESS_KEY=your-secret-key \
   -e AWS_S3_BUCKET=your-bucket-name \
   -e BATORMENT_DUCKDB_REMOTE_URL=https://your-cloudfront-url \
-  -e BA_ANALYZER_SERVICE_API_KEY=your-api-key \
   -e GO_ENV=production \
   ba-torment-data-process:latest
 ```
