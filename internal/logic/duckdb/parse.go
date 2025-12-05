@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"sort"
@@ -294,6 +295,70 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 // Elimination raids have contentID starting with "3S" (e.g., "3S3-1")
 func isEliminationRaid(contentID string) bool {
 	return strings.HasPrefix(contentID, "3S")
+}
+
+// GetEssentialCharacters returns characters used by 70%+ of platinum users (excluding assists)
+// Results are sorted by usage ratio in descending order
+func GetEssentialCharacters(partyData *types.BATormentPartyData) []types.EssentialCharacter {
+	characterCount := make(map[int]int)
+	totalUsers := 0
+
+	for _, party := range partyData.PartyDetail {
+		// Only count platinum ranks (top 20000)
+		if party.Rank > 20000 {
+			break // PartyDetail is sorted by rank, so we can break early
+		}
+		totalUsers++
+
+		for _, members := range party.PartyData {
+			for _, member := range members {
+				if member == 0 {
+					continue
+				}
+				// Skip assists (last digit is 1)
+				if member%10 == 1 {
+					continue
+				}
+				// Extract studentID (first 5 digits)
+				studentID := member / 1000
+				characterCount[studentID]++
+			}
+		}
+	}
+
+	if totalUsers == 0 {
+		return nil
+	}
+
+	// Filter 70%+ usage and sort by ratio descending
+	threshold := float64(totalUsers) * 0.7
+	var result []types.EssentialCharacter
+
+	type charUsage struct {
+		studentID int
+		count     int
+	}
+	var usages []charUsage
+	for sid, count := range characterCount {
+		if float64(count) >= threshold {
+			usages = append(usages, charUsage{sid, count})
+		}
+	}
+
+	// Sort by count descending
+	sort.Slice(usages, func(i, j int) bool {
+		return usages[i].count > usages[j].count
+	})
+
+	for _, u := range usages {
+		ratio := float64(u.count) / float64(totalUsers)
+		result = append(result, types.EssentialCharacter{
+			StudentID: u.studentID,
+			Ratio:     math.Round(ratio*1000) / 1000, // Round to 3 decimal places
+		})
+	}
+
+	return result
 }
 
 // GetPlatinumCuts retrieves score cutoffs at specific ranks (2000, 4000, ..., 20000)

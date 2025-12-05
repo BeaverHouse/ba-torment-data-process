@@ -19,9 +19,16 @@ type BATormentPartyDetail struct {
 }
 
 type BATormentSummaryData struct {
-	Torment      BATormentLevelData `json:"torment"`
-	Lunatic      BATormentLevelData `json:"lunatic"`
-	PlatinumCuts []PlatinumCut      `json:"platinumCuts,omitempty"`
+	Torment             BATormentLevelData   `json:"torment"`
+	Lunatic             BATormentLevelData   `json:"lunatic"`
+	PlatinumCuts        []PlatinumCut        `json:"platinumCuts,omitempty"`
+	EssentialCharacters []EssentialCharacter `json:"essentialCharacters,omitempty"`
+}
+
+// EssentialCharacter represents a character used by 70%+ of platinum users
+type EssentialCharacter struct {
+	StudentID int     `json:"studentId"`
+	Ratio     float64 `json:"ratio"`
 }
 
 // PlatinumCut represents a score cutoff at a specific rank

@@ -124,6 +124,11 @@ func main() {
 			log.Printf("Added %d platinum cuts for %s", len(platinumCuts), contentID)
 		}
 
+		// Add essential characters (70%+ usage in platinum ranks)
+		essentialChars := logic_duckdb.GetEssentialCharacters(partyData)
+		summaryData.EssentialCharacters = essentialChars
+		log.Printf("Essential characters for %s: %d characters with 70%%+ usage", contentID, len(essentialChars))
+
 		if err := logic_upload.MarshalAndUpload(summaryData, "batorment/v3/summary", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload summary data: %v", err)
 			continue
