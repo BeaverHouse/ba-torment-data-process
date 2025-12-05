@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"ba-torment-data-process/internal/constants"
@@ -287,4 +288,63 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 	}
 
 	return partyMembers, nil
+}
+
+// isEliminationRaid checks if the contentID represents an elimination raid (대결전)
+// Elimination raids have contentID starting with "3S" (e.g., "3S3-1")
+func isEliminationRaid(contentID string) bool {
+	return strings.HasPrefix(contentID, "3S")
+}
+
+// GetPlatinumCuts retrieves score cutoffs at specific ranks (2000, 4000, ..., 20000)
+// For elimination raids, it uses combined scores from all armor types
+func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut, error) {
+	dateString := startDate.Format("20060102")
+	dbFileName := fmt.Sprintf("%s.db", dateString)
+
+	// Check if DuckDB file exists
+	if _, err := os.Stat(dbFileName); os.IsNotExist(err) {
+		log.Printf("DuckDB file %s not found for platinum cuts", dbFileName)
+		return nil, fmt.Errorf("duckdb file not available: %w", err)
+	}
+
+	db, err := sql.Open("duckdb", dbFileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open duckdb: %w", err)
+	}
+	defer db.Close()
+
+	// Target ranks: 2000, 4000, 6000, ..., 20000
+	ranks := []int{2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
+
+	var querySQL string
+	if isEliminationRaid(contentID) {
+		querySQL = GetEliminationPlatinumCutSQL(ranks)
+	} else {
+		querySQL = GetPlatinumCutSQL(ranks)
+	}
+
+	rows, err := db.Query(querySQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query platinum cuts: %w", err)
+	}
+	defer rows.Close()
+
+	var cuts []types.PlatinumCut
+	for rows.Next() {
+		var rank, score int
+		if err := rows.Scan(&rank, &score); err != nil {
+			return nil, fmt.Errorf("failed to scan platinum cut: %w", err)
+		}
+		cuts = append(cuts, types.PlatinumCut{
+			Rank:  rank,
+			Score: score,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating platinum cuts: %w", err)
+	}
+
+	return cuts, nil
 }

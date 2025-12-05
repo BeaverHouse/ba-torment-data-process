@@ -113,6 +113,17 @@ func main() {
 			log.Printf("Failed to process summary data: %v", err)
 			continue
 		}
+
+		// Add platinum cuts to summary data
+		platinumCuts, err := logic_duckdb.GetPlatinumCuts(contentID, contentInfo.StartDate.Time)
+		if err != nil {
+			log.Printf("Warning: Failed to get platinum cuts for %s: %v", contentID, err)
+			// Continue even if platinum cuts fail - it's not critical
+		} else {
+			summaryData.PlatinumCuts = platinumCuts
+			log.Printf("Added %d platinum cuts for %s", len(platinumCuts), contentID)
+		}
+
 		if err := logic_upload.MarshalAndUpload(summaryData, "batorment/v3/summary", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload summary data: %v", err)
 			continue

@@ -19,8 +19,16 @@ type BATormentPartyDetail struct {
 }
 
 type BATormentSummaryData struct {
-	Torment BATormentLevelData `json:"torment"`
-	Lunatic BATormentLevelData `json:"lunatic"`
+	Torment      BATormentLevelData `json:"torment"`
+	Lunatic      BATormentLevelData `json:"lunatic"`
+	PlatinumCuts []PlatinumCut      `json:"platinumCuts,omitempty"`
+}
+
+// PlatinumCut represents a score cutoff at a specific rank
+// Used for showing score thresholds at 2000, 4000, ..., 20000 ranks
+type PlatinumCut struct {
+	Rank  int `json:"rank"`
+	Score int `json:"score"`
 }
 
 type BATormentLevelData struct {
