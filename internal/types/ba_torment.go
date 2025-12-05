@@ -19,16 +19,52 @@ type BATormentPartyDetail struct {
 }
 
 type BATormentSummaryData struct {
-	Torment             BATormentLevelData   `json:"torment"`
-	Lunatic             BATormentLevelData   `json:"lunatic"`
-	PlatinumCuts        []PlatinumCut        `json:"platinumCuts,omitempty"`
-	EssentialCharacters []EssentialCharacter `json:"essentialCharacters,omitempty"`
+	Torment              BATormentLevelData    `json:"torment"`
+	Lunatic              BATormentLevelData    `json:"lunatic"`
+	PlatinumCuts         []PlatinumCut         `json:"platinumCuts,omitempty"`
+	EssentialCharacters  []EssentialCharacter  `json:"essentialCharacters,omitempty"`
+	HighImpactCharacters []HighImpactCharacter `json:"highImpactCharacters,omitempty"`
+	MinUEUsers           *MinUEUsers           `json:"minUEUsers,omitempty"`
+	MaxPartyUsers        *MaxPartyUsers        `json:"maxPartyUsers,omitempty"`
 }
 
 // EssentialCharacter represents a character used by 70%+ of platinum users
 type EssentialCharacter struct {
 	StudentID int     `json:"studentId"`
 	Ratio     float64 `json:"ratio"`
+}
+
+// HighImpactCharacter represents a character with high score impact when missing
+type HighImpactCharacter struct {
+	StudentID  int `json:"studentId"`
+	ScoreGap   int `json:"scoreGap"`   // 1st place score - best score without this character
+	TopScore   int `json:"topScore"`   // 1st place score (with this character)
+	WithoutMax int `json:"withoutMax"` // best score without this character
+}
+
+// MinUEUser represents a user who cleared with minimum unique equipment usage
+type MinUEUser struct {
+	UECount    int      `json:"ueCount"`
+	PartyCount int      `json:"partyCount"`
+	PartyData  [][6]int `json:"partyData"`
+}
+
+// MinUEUsers contains min UE users for each difficulty level
+type MinUEUsers struct {
+	Torment *MinUEUser `json:"torment,omitempty"`
+	Lunatic *MinUEUser `json:"lunatic,omitempty"`
+}
+
+// MaxPartyUser represents a user who cleared with maximum party count
+type MaxPartyUser struct {
+	PartyCount int      `json:"partyCount"`
+	PartyData  [][6]int `json:"partyData"`
+}
+
+// MaxPartyUsers contains max party users for each difficulty level
+type MaxPartyUsers struct {
+	Torment *MaxPartyUser `json:"torment,omitempty"`
+	Lunatic *MaxPartyUser `json:"lunatic,omitempty"`
 }
 
 // PlatinumCut represents a score cutoff at a specific rank

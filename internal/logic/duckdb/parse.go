@@ -361,6 +361,235 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) []types.Essenti
 	return result
 }
 
+// GetMinUEUsers returns users who cleared with minimum unique equipment usage
+// Sorted by UE count ascending, then party count ascending
+// Returns separate results for Torment and Lunatic difficulties
+func GetMinUEUsers(partyData *types.BATormentPartyData) *types.MinUEUsers {
+	if len(partyData.PartyDetail) == 0 {
+		return nil
+	}
+
+	type userUEData struct {
+		ueCount    int
+		partyCount int
+		partyData  [][6]int
+	}
+
+	var tormentUsers, lunaticUsers []userUEData
+
+	for _, party := range partyData.PartyDetail {
+		// Only consider platinum users
+		if party.Rank > 20000 {
+			break
+		}
+
+		// Count UE usage (excluding assists)
+		ueCount := 0
+		for _, members := range party.PartyData {
+			for _, member := range members {
+				if member == 0 {
+					continue
+				}
+				// Skip assists (last digit is 1)
+				if member%10 == 1 {
+					continue
+				}
+				// Check weapon star (7th digit): (member % 100) / 10
+				weaponStar := (member % 100) / 10
+				if weaponStar > 0 {
+					ueCount++
+				}
+			}
+		}
+
+		userData := userUEData{
+			ueCount:    ueCount,
+			partyCount: len(party.PartyData),
+			partyData:  party.PartyData,
+		}
+
+		// Classify by difficulty
+		if party.Score >= constants.LunaticMinScore {
+			lunaticUsers = append(lunaticUsers, userData)
+		} else if party.Score >= constants.TormentMinScore {
+			tormentUsers = append(tormentUsers, userData)
+		}
+	}
+
+	// Sort function: UE count ascending, then party count ascending
+	sortFunc := func(users []userUEData) {
+		sort.Slice(users, func(i, j int) bool {
+			if users[i].ueCount != users[j].ueCount {
+				return users[i].ueCount < users[j].ueCount
+			}
+			return users[i].partyCount < users[j].partyCount
+		})
+	}
+
+	result := &types.MinUEUsers{}
+
+	if len(tormentUsers) > 0 {
+		sortFunc(tormentUsers)
+		result.Torment = &types.MinUEUser{
+			UECount:    tormentUsers[0].ueCount,
+			PartyCount: tormentUsers[0].partyCount,
+			PartyData:  tormentUsers[0].partyData,
+		}
+	}
+
+	if len(lunaticUsers) > 0 {
+		sortFunc(lunaticUsers)
+		result.Lunatic = &types.MinUEUser{
+			UECount:    lunaticUsers[0].ueCount,
+			PartyCount: lunaticUsers[0].partyCount,
+			PartyData:  lunaticUsers[0].partyData,
+		}
+	}
+
+	return result
+}
+
+// GetMaxPartyUsers returns users who cleared with maximum party count
+// Returns separate results for Torment and Lunatic difficulties
+func GetMaxPartyUsers(partyData *types.BATormentPartyData) *types.MaxPartyUsers {
+	if len(partyData.PartyDetail) == 0 {
+		return nil
+	}
+
+	var tormentMax, lunaticMax *types.MaxPartyUser
+
+	for _, party := range partyData.PartyDetail {
+		// Only consider platinum users
+		if party.Rank > 20000 {
+			break
+		}
+
+		partyCount := len(party.PartyData)
+
+		// Classify by difficulty and track max
+		if party.Score >= constants.LunaticMinScore {
+			if lunaticMax == nil || partyCount > lunaticMax.PartyCount {
+				lunaticMax = &types.MaxPartyUser{
+					PartyCount: partyCount,
+					PartyData:  party.PartyData,
+				}
+			}
+		} else if party.Score >= constants.TormentMinScore {
+			if tormentMax == nil || partyCount > tormentMax.PartyCount {
+				tormentMax = &types.MaxPartyUser{
+					PartyCount: partyCount,
+					PartyData:  party.PartyData,
+				}
+			}
+		}
+	}
+
+	return &types.MaxPartyUsers{
+		Torment: tormentMax,
+		Lunatic: lunaticMax,
+	}
+}
+
+// GetHighImpactCharacters returns top 3 characters with the biggest score gap when missing
+// It finds characters used by top 100 players and calculates the gap between
+// 1st place score and the best score achieved without that character
+func GetHighImpactCharacters(partyData *types.BATormentPartyData) []types.HighImpactCharacter {
+	if len(partyData.PartyDetail) == 0 {
+		return nil
+	}
+
+	topScore := partyData.PartyDetail[0].Score
+
+	// Step 1: Collect characters used by top 100 (excluding assists)
+	top100Chars := make(map[int]bool)
+	for _, party := range partyData.PartyDetail {
+		if party.Rank > 100 {
+			break
+		}
+		for _, members := range party.PartyData {
+			for _, member := range members {
+				if member == 0 {
+					continue
+				}
+				// Skip assists
+				if member%10 == 1 {
+					continue
+				}
+				studentID := member / 1000
+				top100Chars[studentID] = true
+			}
+		}
+	}
+
+	// Step 2: For each user, track which characters they used
+	// and find the best score for users NOT using each character
+	bestScoreWithout := make(map[int]int) // studentID -> best score without this character
+
+	for _, party := range partyData.PartyDetail {
+		// Only consider platinum users
+		if party.Rank > 20000 {
+			break
+		}
+
+		// Collect characters this user used (excluding assists)
+		usedChars := make(map[int]bool)
+		for _, members := range party.PartyData {
+			for _, member := range members {
+				if member == 0 {
+					continue
+				}
+				if member%10 == 1 {
+					continue
+				}
+				studentID := member / 1000
+				usedChars[studentID] = true
+			}
+		}
+
+		// For each top100 character NOT used by this user, update best score
+		for charID := range top100Chars {
+			if !usedChars[charID] {
+				if party.Score > bestScoreWithout[charID] {
+					bestScoreWithout[charID] = party.Score
+				}
+			}
+		}
+	}
+
+	// Step 3: Calculate score gaps and find top 3
+	type charGap struct {
+		studentID  int
+		gap        int
+		withoutMax int
+	}
+	var gaps []charGap
+	for charID := range top100Chars {
+		withoutMax := bestScoreWithout[charID]
+		gap := topScore - withoutMax
+		if withoutMax > 0 { // Only include if someone cleared without this character
+			gaps = append(gaps, charGap{charID, gap, withoutMax})
+		}
+	}
+
+	// Sort by gap descending
+	sort.Slice(gaps, func(i, j int) bool {
+		return gaps[i].gap > gaps[j].gap
+	})
+
+	// Return top 3
+	var result []types.HighImpactCharacter
+	for i := 0; i < 3 && i < len(gaps); i++ {
+		result = append(result, types.HighImpactCharacter{
+			StudentID:  gaps[i].studentID,
+			ScoreGap:   gaps[i].gap,
+			TopScore:   topScore,
+			WithoutMax: gaps[i].withoutMax,
+		})
+	}
+
+	return result
+}
+
 // GetPlatinumCuts retrieves score cutoffs at specific ranks (2000, 4000, ..., 20000)
 // For elimination raids, it uses combined scores from all armor types
 func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut, error) {

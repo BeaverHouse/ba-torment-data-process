@@ -129,6 +129,35 @@ func main() {
 		summaryData.EssentialCharacters = essentialChars
 		log.Printf("Essential characters for %s: %d characters with 70%%+ usage", contentID, len(essentialChars))
 
+		// Add high impact characters (biggest score gap when missing)
+		highImpactChars := logic_duckdb.GetHighImpactCharacters(partyData)
+		summaryData.HighImpactCharacters = highImpactChars
+		log.Printf("High impact characters for %s: %d characters", contentID, len(highImpactChars))
+
+		// Add min UE users (users who cleared with minimum unique equipment)
+		minUEUsers := logic_duckdb.GetMinUEUsers(partyData)
+		summaryData.MinUEUsers = minUEUsers
+		if minUEUsers != nil {
+			if minUEUsers.Torment != nil {
+				log.Printf("Min UE user (Torment) for %s: %d UE, %d parties", contentID, minUEUsers.Torment.UECount, minUEUsers.Torment.PartyCount)
+			}
+			if minUEUsers.Lunatic != nil {
+				log.Printf("Min UE user (Lunatic) for %s: %d UE, %d parties", contentID, minUEUsers.Lunatic.UECount, minUEUsers.Lunatic.PartyCount)
+			}
+		}
+
+		// Add max party users (users who cleared with maximum party count)
+		maxPartyUsers := logic_duckdb.GetMaxPartyUsers(partyData)
+		summaryData.MaxPartyUsers = maxPartyUsers
+		if maxPartyUsers != nil {
+			if maxPartyUsers.Torment != nil {
+				log.Printf("Max party user (Torment) for %s: %d parties", contentID, maxPartyUsers.Torment.PartyCount)
+			}
+			if maxPartyUsers.Lunatic != nil {
+				log.Printf("Max party user (Lunatic) for %s: %d parties", contentID, maxPartyUsers.Lunatic.PartyCount)
+			}
+		}
+
 		if err := logic_upload.MarshalAndUpload(summaryData, "batorment/v3/summary", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload summary data: %v", err)
 			continue
