@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"ba-torment-data-process/internal/constants"
@@ -287,4 +289,474 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 	}
 
 	return partyMembers, nil
+}
+
+// isEliminationRaid checks if the contentID represents an elimination raid (대결전)
+// Elimination raids have contentID starting with "3S" (e.g., "3S3-1")
+func isEliminationRaid(contentID string) bool {
+	return strings.HasPrefix(contentID, "3S")
+}
+
+// getExistingPointColumns returns the list of *_point columns that exist in complete_runs table
+func getExistingPointColumns(db *sql.DB) ([]string, error) {
+	rows, err := db.Query(GetCompleteRunsColumnsSQL())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	armorTypes := []string{"Light_point", "Heavy_point", "Special_point", "Elastic_point"}
+	armorTypeSet := make(map[string]bool)
+	for _, at := range armorTypes {
+		armorTypeSet[at] = true
+	}
+
+	var existingColumns []string
+	for rows.Next() {
+		var columnName string
+		if err := rows.Scan(&columnName); err != nil {
+			return nil, err
+		}
+		if armorTypeSet[columnName] {
+			existingColumns = append(existingColumns, columnName)
+		}
+	}
+
+	return existingColumns, nil
+}
+
+// GetEssentialCharacters returns characters used by 70%+ of users (excluding assists)
+// Results are sorted by usage ratio in descending order
+// Returns separate results for Torment and Lunatic difficulties
+func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []types.EssentialCharacter, lunatic []types.EssentialCharacter) {
+	if len(partyData.PartyDetail) == 0 {
+		return nil, nil
+	}
+
+	// Check if this is INSANE difficulty (top score < TormentMinScore)
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
+	tormentCharCount := make(map[int]int)
+	lunaticCharCount := make(map[int]int)
+	var tormentUsers, lunaticUsers int
+
+	for _, party := range partyData.PartyDetail {
+		// Only count platinum ranks (top 20000)
+		if party.Rank > 20000 {
+			break
+		}
+
+		// Determine difficulty
+		isLunatic := party.Score >= constants.LunaticMinScore
+		isTorment := isInsane || party.Score >= constants.TormentMinScore
+
+		if isLunatic {
+			lunaticUsers++
+		} else if isTorment {
+			tormentUsers++
+		} else {
+			continue
+		}
+
+		for _, members := range party.PartyData {
+			for _, member := range members {
+				if member == 0 {
+					continue
+				}
+				// Skip assists (last digit is 1)
+				if member%10 == 1 {
+					continue
+				}
+				// Extract studentID (first 5 digits)
+				studentID := member / 1000
+				if isLunatic {
+					lunaticCharCount[studentID]++
+				} else {
+					tormentCharCount[studentID]++
+				}
+			}
+		}
+	}
+
+	// Helper function to calculate essential characters
+	calcEssential := func(charCount map[int]int, totalUsers int) []types.EssentialCharacter {
+		if totalUsers == 0 {
+			return nil
+		}
+
+		threshold := float64(totalUsers) * 0.7
+		type charUsage struct {
+			studentID int
+			count     int
+		}
+		var usages []charUsage
+		for sid, count := range charCount {
+			if float64(count) >= threshold {
+				usages = append(usages, charUsage{sid, count})
+			}
+		}
+
+		sort.Slice(usages, func(i, j int) bool {
+			return usages[i].count > usages[j].count
+		})
+
+		var result []types.EssentialCharacter
+		for _, u := range usages {
+			ratio := float64(u.count) / float64(totalUsers)
+			result = append(result, types.EssentialCharacter{
+				StudentID: u.studentID,
+				Ratio:     math.Round(ratio*1000) / 1000,
+			})
+		}
+		return result
+	}
+
+	torment = calcEssential(tormentCharCount, tormentUsers)
+	lunatic = calcEssential(lunaticCharCount, lunaticUsers)
+
+	return torment, lunatic
+}
+
+// GetMinUEUsers returns users who cleared with minimum unique equipment usage
+// Sorted by UE count ascending, then party count ascending
+// Returns separate results for Torment and Lunatic difficulties
+func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUser, lunatic *types.MinUEUser) {
+	if len(partyData.PartyDetail) == 0 {
+		return nil, nil
+	}
+
+	// Check if this is INSANE difficulty (top score < TormentMinScore)
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
+	type userUEData struct {
+		rank       int
+		score      int
+		ueCount    int
+		partyCount int
+		partyData  [][6]int
+	}
+
+	var tormentUsers, lunaticUsers []userUEData
+
+	for _, party := range partyData.PartyDetail {
+		// Only consider platinum users
+		if party.Rank > 20000 {
+			break
+		}
+
+		// Count UE usage (excluding assists)
+		ueCount := 0
+		for _, members := range party.PartyData {
+			for _, member := range members {
+				if member == 0 {
+					continue
+				}
+				// Skip assists (last digit is 1)
+				if member%10 == 1 {
+					continue
+				}
+				// Check weapon star (7th digit): (member % 100) / 10
+				weaponStar := (member % 100) / 10
+				if weaponStar > 0 {
+					ueCount++
+				}
+			}
+		}
+
+		userData := userUEData{
+			rank:       party.Rank,
+			score:      party.Score,
+			ueCount:    ueCount,
+			partyCount: len(party.PartyData),
+			partyData:  party.PartyData,
+		}
+
+		// Classify by difficulty
+		if party.Score >= constants.LunaticMinScore {
+			lunaticUsers = append(lunaticUsers, userData)
+		} else if isInsane || party.Score >= constants.TormentMinScore {
+			// INSANE: all users go to torment
+			tormentUsers = append(tormentUsers, userData)
+		}
+	}
+
+	// Sort function: UE count ascending, then party count ascending, then rank ascending
+	sortFunc := func(users []userUEData) {
+		sort.Slice(users, func(i, j int) bool {
+			if users[i].ueCount != users[j].ueCount {
+				return users[i].ueCount < users[j].ueCount
+			}
+			if users[i].partyCount != users[j].partyCount {
+				return users[i].partyCount < users[j].partyCount
+			}
+			return users[i].rank < users[j].rank
+		})
+	}
+
+	if len(tormentUsers) > 0 {
+		sortFunc(tormentUsers)
+		torment = &types.MinUEUser{
+			Rank:      tormentUsers[0].rank,
+			Score:     tormentUsers[0].score,
+			UECount:   tormentUsers[0].ueCount,
+			PartyData: tormentUsers[0].partyData,
+		}
+	}
+
+	if len(lunaticUsers) > 0 {
+		sortFunc(lunaticUsers)
+		lunatic = &types.MinUEUser{
+			Rank:      lunaticUsers[0].rank,
+			Score:     lunaticUsers[0].score,
+			UECount:   lunaticUsers[0].ueCount,
+			PartyData: lunaticUsers[0].partyData,
+		}
+	}
+
+	return torment, lunatic
+}
+
+// GetMaxPartyUsers returns users who cleared with maximum party count
+// Returns separate results for Torment and Lunatic difficulties
+func GetMaxPartyUsers(partyData *types.BATormentPartyData) (torment *types.MaxPartyUser, lunatic *types.MaxPartyUser) {
+	if len(partyData.PartyDetail) == 0 {
+		return nil, nil
+	}
+
+	// Check if this is INSANE difficulty (top score < TormentMinScore)
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
+	var tormentMaxCount, lunaticMaxCount int
+
+	for _, party := range partyData.PartyDetail {
+		// Only consider platinum users
+		if party.Rank > 20000 {
+			break
+		}
+
+		partyCount := len(party.PartyData)
+
+		// Classify by difficulty and track max
+		if party.Score >= constants.LunaticMinScore {
+			if partyCount > lunaticMaxCount {
+				lunaticMaxCount = partyCount
+				lunatic = &types.MaxPartyUser{
+					Rank:      party.Rank,
+					Score:     party.Score,
+					PartyData: party.PartyData,
+				}
+			}
+		} else if isInsane || party.Score >= constants.TormentMinScore {
+			// INSANE: all users go to torment
+			if partyCount > tormentMaxCount {
+				tormentMaxCount = partyCount
+				torment = &types.MaxPartyUser{
+					Rank:      party.Rank,
+					Score:     party.Score,
+					PartyData: party.PartyData,
+				}
+			}
+		}
+	}
+
+	return torment, lunatic
+}
+
+// GetHighImpactCharacters returns top 3 characters with the biggest rank gap when missing
+// It finds characters used by top 100 players of each difficulty and calculates the gap between
+// best rank and the best rank achieved without that character
+// For 100% usage characters, it falls back to lower difficulty or uses -1 if unavailable
+// Returns separate results for Torment and Lunatic difficulties
+func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []types.HighImpactCharacter, lunatic []types.HighImpactCharacter) {
+	if len(partyData.PartyDetail) == 0 {
+		return nil, nil
+	}
+
+	// Check if this is INSANE difficulty (top score < TormentMinScore)
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
+	// Separate data by difficulty
+	type partyInfo struct {
+		rank      int
+		usedChars map[int]bool
+	}
+
+	var tormentParties, lunaticParties []partyInfo
+
+	for _, party := range partyData.PartyDetail {
+		if party.Rank > 20000 {
+			break
+		}
+
+		usedChars := make(map[int]bool)
+		for _, members := range party.PartyData {
+			for _, member := range members {
+				if member == 0 {
+					continue
+				}
+				// Include both own characters and assists
+				usedChars[member/1000] = true
+			}
+		}
+
+		info := partyInfo{rank: party.Rank, usedChars: usedChars}
+
+		if party.Score >= constants.LunaticMinScore {
+			lunaticParties = append(lunaticParties, info)
+		} else if isInsane || party.Score >= constants.TormentMinScore {
+			tormentParties = append(tormentParties, info)
+		}
+	}
+
+	// Helper function to find best rank (lowest) without a character in given parties
+	// Returns 0 if no one cleared without the character
+	findBestRankWithout := func(parties []partyInfo, charID int) int {
+		bestRank := 0
+		for _, p := range parties {
+			if !p.usedChars[charID] {
+				if bestRank == 0 || p.rank < bestRank {
+					bestRank = p.rank
+				}
+			}
+		}
+		return bestRank
+	}
+
+	// Helper function to calculate high impact characters for a difficulty
+	// fallbackParties is used when 100% usage (no one cleared without the character)
+	calcHighImpact := func(parties []partyInfo, fallbackParties []partyInfo, top100Limit int) []types.HighImpactCharacter {
+		if len(parties) == 0 {
+			return nil
+		}
+
+		topRank := parties[0].rank
+
+		// Collect characters used by top 100 of this difficulty
+		top100Chars := make(map[int]bool)
+		for i, p := range parties {
+			if i >= top100Limit {
+				break
+			}
+			for charID := range p.usedChars {
+				top100Chars[charID] = true
+			}
+		}
+
+		// Calculate gaps
+		type charGap struct {
+			studentID       int
+			rankGap         int
+			withoutBestRank int
+		}
+		var gaps []charGap
+
+		for charID := range top100Chars {
+			withoutBestRank := findBestRankWithout(parties, charID)
+
+			// If 100% usage in this difficulty, try fallback (lower difficulty)
+			if withoutBestRank == 0 && len(fallbackParties) > 0 {
+				withoutBestRank = findBestRankWithout(fallbackParties, charID)
+			}
+
+			// Calculate gap (-1 if still no data)
+			var rankGap int
+			if withoutBestRank > 0 {
+				rankGap = withoutBestRank - topRank
+			} else {
+				rankGap = -1 // 100% usage, no comparison available
+			}
+
+			gaps = append(gaps, charGap{charID, rankGap, withoutBestRank})
+		}
+
+		// Sort: -1 (100% usage) first, then by gap descending
+		sort.Slice(gaps, func(i, j int) bool {
+			if gaps[i].rankGap == -1 && gaps[j].rankGap != -1 {
+				return true
+			}
+			if gaps[i].rankGap != -1 && gaps[j].rankGap == -1 {
+				return false
+			}
+			return gaps[i].rankGap > gaps[j].rankGap
+		})
+
+		var result []types.HighImpactCharacter
+		for i := 0; i < 3 && i < len(gaps); i++ {
+			result = append(result, types.HighImpactCharacter{
+				StudentID:       gaps[i].studentID,
+				RankGap:         gaps[i].rankGap,
+				TopRank:         topRank,
+				WithoutBestRank: gaps[i].withoutBestRank,
+			})
+		}
+		return result
+	}
+
+	// For torment, no fallback (it's the lowest difficulty)
+	torment = calcHighImpact(tormentParties, nil, 100)
+	// For lunatic, fallback to torment
+	lunatic = calcHighImpact(lunaticParties, tormentParties, 100)
+
+	return torment, lunatic
+}
+
+// GetPlatinumCuts retrieves score cutoffs at specific ranks (2000, 4000, ..., 20000)
+// For elimination raids, it uses combined scores from all armor types
+func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut, error) {
+	dateString := startDate.Format("20060102")
+	dbFileName := fmt.Sprintf("%s.db", dateString)
+
+	// Check if DuckDB file exists
+	if _, err := os.Stat(dbFileName); os.IsNotExist(err) {
+		log.Printf("DuckDB file %s not found for platinum cuts", dbFileName)
+		return nil, fmt.Errorf("duckdb file not available: %w", err)
+	}
+
+	db, err := sql.Open("duckdb", dbFileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open duckdb: %w", err)
+	}
+	defer db.Close()
+
+	// Target ranks: 2000, 4000, 6000, ..., 20000
+	ranks := []int{2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
+
+	var querySQL string
+	if isEliminationRaid(contentID) {
+		// For elimination raids, first check which point columns exist
+		existingColumns, err := getExistingPointColumns(db)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get existing columns: %w", err)
+		}
+		if len(existingColumns) == 0 {
+			return nil, fmt.Errorf("no point columns found for elimination raid")
+		}
+		querySQL = GetEliminationPlatinumCutSQL(ranks, existingColumns)
+	} else {
+		querySQL = GetPlatinumCutSQL(ranks)
+	}
+
+	rows, err := db.Query(querySQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query platinum cuts: %w", err)
+	}
+	defer rows.Close()
+
+	var cuts []types.PlatinumCut
+	for rows.Next() {
+		var rank, score int
+		if err := rows.Scan(&rank, &score); err != nil {
+			return nil, fmt.Errorf("failed to scan platinum cut: %w", err)
+		}
+		cuts = append(cuts, types.PlatinumCut{
+			Rank:  rank,
+			Score: score,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating platinum cuts: %w", err)
+	}
+
+	return cuts, nil
 }

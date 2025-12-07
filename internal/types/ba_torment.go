@@ -19,14 +19,55 @@ type BATormentPartyDetail struct {
 }
 
 type BATormentSummaryData struct {
-	Torment BATormentLevelData `json:"torment"`
-	Lunatic BATormentLevelData `json:"lunatic"`
+	Torment      BATormentLevelData `json:"torment"`
+	Lunatic      BATormentLevelData `json:"lunatic"`
+	PlatinumCuts []PlatinumCut      `json:"platinumCuts,omitempty"`
+}
+
+// EssentialCharacter represents a character used by 70%+ of platinum users
+type EssentialCharacter struct {
+	StudentID int     `json:"studentId"`
+	Ratio     float64 `json:"ratio"`
+}
+
+// HighImpactCharacter represents a character with high rank impact when missing
+type HighImpactCharacter struct {
+	StudentID       int `json:"studentId"`
+	RankGap         int `json:"rankGap"`         // WithoutBestRank - TopRank, or -1 if 100% usage
+	TopRank         int `json:"topRank"`         // best rank in this difficulty (uses this character)
+	WithoutBestRank int `json:"withoutBestRank"` // best rank achieved without this character (-1 if 100% usage)
+}
+
+// MinUEUser represents a user who cleared with minimum unique equipment usage
+type MinUEUser struct {
+	Rank      int      `json:"rank"`
+	Score     int      `json:"score"`
+	UECount   int      `json:"ueCount"`
+	PartyData [][6]int `json:"partyData"`
+}
+
+// MaxPartyUser represents a user who cleared with maximum party count
+type MaxPartyUser struct {
+	Rank      int      `json:"rank"`
+	Score     int      `json:"score"`
+	PartyData [][6]int `json:"partyData"`
+}
+
+// PlatinumCut represents a score cutoff at a specific rank
+// Used for showing score thresholds at 2000, 4000, ..., 20000 ranks
+type PlatinumCut struct {
+	Rank  int `json:"rank"`
+	Score int `json:"score"`
 }
 
 type BATormentLevelData struct {
-	ClearCount  int              `json:"clearCount"`
-	PartyCounts map[string][]int `json:"partyCounts"`
-	Top5Partys  [][]any          `json:"top5Partys"`
+	ClearCount           int                   `json:"clearCount"`
+	PartyCounts          map[string][]int      `json:"partyCounts"`
+	Top5Partys           [][]any               `json:"top5Partys"`
+	EssentialCharacters  []EssentialCharacter  `json:"essentialCharacters,omitempty"`
+	HighImpactCharacters []HighImpactCharacter `json:"highImpactCharacters,omitempty"`
+	MinUEUser            *MinUEUser            `json:"minUEUser,omitempty"`
+	MaxPartyUser         *MaxPartyUser         `json:"maxPartyUser,omitempty"`
 }
 
 // ********************************************
