@@ -135,27 +135,25 @@ func main() {
 		log.Printf("High impact characters for %s: %d characters", contentID, len(highImpactChars))
 
 		// Add min UE users (users who cleared with minimum unique equipment)
-		minUEUsers := logic_duckdb.GetMinUEUsers(partyData)
-		summaryData.MinUEUsers = minUEUsers
-		if minUEUsers != nil {
-			if minUEUsers.Torment != nil {
-				log.Printf("Min UE user (Torment) for %s: %d UE, %d parties", contentID, minUEUsers.Torment.UECount, minUEUsers.Torment.PartyCount)
-			}
-			if minUEUsers.Lunatic != nil {
-				log.Printf("Min UE user (Lunatic) for %s: %d UE, %d parties", contentID, minUEUsers.Lunatic.UECount, minUEUsers.Lunatic.PartyCount)
-			}
+		minUETorment, minUELunatic := logic_duckdb.GetMinUEUsers(partyData)
+		summaryData.Torment.MinUEUser = minUETorment
+		summaryData.Lunatic.MinUEUser = minUELunatic
+		if minUETorment != nil {
+			log.Printf("Min UE user (Torment) for %s: rank %d, %d UE, %d parties", contentID, minUETorment.Rank, minUETorment.UECount, len(minUETorment.PartyData))
+		}
+		if minUELunatic != nil {
+			log.Printf("Min UE user (Lunatic) for %s: rank %d, %d UE, %d parties", contentID, minUELunatic.Rank, minUELunatic.UECount, len(minUELunatic.PartyData))
 		}
 
 		// Add max party users (users who cleared with maximum party count)
-		maxPartyUsers := logic_duckdb.GetMaxPartyUsers(partyData)
-		summaryData.MaxPartyUsers = maxPartyUsers
-		if maxPartyUsers != nil {
-			if maxPartyUsers.Torment != nil {
-				log.Printf("Max party user (Torment) for %s: %d parties", contentID, maxPartyUsers.Torment.PartyCount)
-			}
-			if maxPartyUsers.Lunatic != nil {
-				log.Printf("Max party user (Lunatic) for %s: %d parties", contentID, maxPartyUsers.Lunatic.PartyCount)
-			}
+		maxPartyTorment, maxPartyLunatic := logic_duckdb.GetMaxPartyUsers(partyData)
+		summaryData.Torment.MaxPartyUser = maxPartyTorment
+		summaryData.Lunatic.MaxPartyUser = maxPartyLunatic
+		if maxPartyTorment != nil {
+			log.Printf("Max party user (Torment) for %s: rank %d, %d parties", contentID, maxPartyTorment.Rank, len(maxPartyTorment.PartyData))
+		}
+		if maxPartyLunatic != nil {
+			log.Printf("Max party user (Lunatic) for %s: rank %d, %d parties", contentID, maxPartyLunatic.Rank, len(maxPartyLunatic.PartyData))
 		}
 
 		if err := logic_upload.MarshalAndUpload(summaryData, "batorment/v3/summary", fileName, *dryRun, ""); err != nil {

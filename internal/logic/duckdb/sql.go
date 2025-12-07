@@ -1,6 +1,9 @@
 package logic_duckdb
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func GetCompleteRunIDAndScoreSQL(armorType string) string {
 	columnName := "point"
@@ -55,26 +58,38 @@ ORDER BY rank
 }
 
 // GetEliminationPlatinumCutSQL returns SQL for getting combined scores at specific ranks for elimination raids (대결전)
-// It sums all armor type points and ranks by total score
-func GetEliminationPlatinumCutSQL(ranks []int) string {
+// It sums only the existing armor type point columns and ranks by total score
+// existingColumns should contain only columns that exist in the table (e.g., ["Light_point", "Heavy_point", "Special_point"])
+func GetEliminationPlatinumCutSQL(ranks []int, existingColumns []string) string {
+	if len(existingColumns) == 0 {
+		return ""
+	}
+
+	// Build the sum expression with existing columns only
+	sumParts := make([]string, len(existingColumns))
+	for i, col := range existingColumns {
+		sumParts[i] = fmt.Sprintf("COALESCE(%s, 0)", col)
+	}
+	sumExpr := strings.Join(sumParts, " + ")
+
 	return fmt.Sprintf(`
 WITH ranked AS (
 	SELECT
-		COALESCE(Light_point, 0) + COALESCE(Heavy_point, 0) +
-		COALESCE(Special_point, 0) + COALESCE(Elastic_point, 0) as total_point,
-		ROW_NUMBER() OVER (
-			ORDER BY COALESCE(Light_point, 0) + COALESCE(Heavy_point, 0) +
-			         COALESCE(Special_point, 0) + COALESCE(Elastic_point, 0) DESC
-		) as rank
+		%s as total_point,
+		ROW_NUMBER() OVER (ORDER BY %s DESC) as rank
 	FROM complete_runs
-	WHERE COALESCE(Light_point, 0) + COALESCE(Heavy_point, 0) +
-	      COALESCE(Special_point, 0) + COALESCE(Elastic_point, 0) > 0
+	WHERE %s > 0
 )
 SELECT rank, total_point
 FROM ranked
 WHERE rank IN (%s)
 ORDER BY rank
-`, intSliceToSQL(ranks))
+`, sumExpr, sumExpr, sumExpr, intSliceToSQL(ranks))
+}
+
+// GetCompleteRunsColumnsSQL returns SQL to get column names from complete_runs table
+func GetCompleteRunsColumnsSQL() string {
+	return `SELECT column_name FROM information_schema.columns WHERE table_name = 'complete_runs'`
 }
 
 // intSliceToSQL converts []int to comma-separated string for SQL IN clause

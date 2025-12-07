@@ -297,6 +297,34 @@ func isEliminationRaid(contentID string) bool {
 	return strings.HasPrefix(contentID, "3S")
 }
 
+// getExistingPointColumns returns the list of *_point columns that exist in complete_runs table
+func getExistingPointColumns(db *sql.DB) ([]string, error) {
+	rows, err := db.Query(GetCompleteRunsColumnsSQL())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	armorTypes := []string{"Light_point", "Heavy_point", "Special_point", "Elastic_point"}
+	armorTypeSet := make(map[string]bool)
+	for _, at := range armorTypes {
+		armorTypeSet[at] = true
+	}
+
+	var existingColumns []string
+	for rows.Next() {
+		var columnName string
+		if err := rows.Scan(&columnName); err != nil {
+			return nil, err
+		}
+		if armorTypeSet[columnName] {
+			existingColumns = append(existingColumns, columnName)
+		}
+	}
+
+	return existingColumns, nil
+}
+
 // GetEssentialCharacters returns characters used by 70%+ of platinum users (excluding assists)
 // Results are sorted by usage ratio in descending order
 func GetEssentialCharacters(partyData *types.BATormentPartyData) []types.EssentialCharacter {
@@ -364,12 +392,17 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) []types.Essenti
 // GetMinUEUsers returns users who cleared with minimum unique equipment usage
 // Sorted by UE count ascending, then party count ascending
 // Returns separate results for Torment and Lunatic difficulties
-func GetMinUEUsers(partyData *types.BATormentPartyData) *types.MinUEUsers {
+func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUser, lunatic *types.MinUEUser) {
 	if len(partyData.PartyDetail) == 0 {
-		return nil
+		return nil, nil
 	}
 
+	// Check if this is INSANE difficulty (top score < TormentMinScore)
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
 	type userUEData struct {
+		rank       int
+		score      int
 		ueCount    int
 		partyCount int
 		partyData  [][6]int
@@ -403,6 +436,8 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) *types.MinUEUsers {
 		}
 
 		userData := userUEData{
+			rank:       party.Rank,
+			score:      party.Score,
 			ueCount:    ueCount,
 			partyCount: len(party.PartyData),
 			partyData:  party.PartyData,
@@ -411,52 +446,59 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) *types.MinUEUsers {
 		// Classify by difficulty
 		if party.Score >= constants.LunaticMinScore {
 			lunaticUsers = append(lunaticUsers, userData)
-		} else if party.Score >= constants.TormentMinScore {
+		} else if isInsane || party.Score >= constants.TormentMinScore {
+			// INSANE: all users go to torment
 			tormentUsers = append(tormentUsers, userData)
 		}
 	}
 
-	// Sort function: UE count ascending, then party count ascending
+	// Sort function: UE count ascending, then party count ascending, then rank ascending
 	sortFunc := func(users []userUEData) {
 		sort.Slice(users, func(i, j int) bool {
 			if users[i].ueCount != users[j].ueCount {
 				return users[i].ueCount < users[j].ueCount
 			}
-			return users[i].partyCount < users[j].partyCount
+			if users[i].partyCount != users[j].partyCount {
+				return users[i].partyCount < users[j].partyCount
+			}
+			return users[i].rank < users[j].rank
 		})
 	}
 
-	result := &types.MinUEUsers{}
-
 	if len(tormentUsers) > 0 {
 		sortFunc(tormentUsers)
-		result.Torment = &types.MinUEUser{
-			UECount:    tormentUsers[0].ueCount,
-			PartyCount: tormentUsers[0].partyCount,
-			PartyData:  tormentUsers[0].partyData,
+		torment = &types.MinUEUser{
+			Rank:      tormentUsers[0].rank,
+			Score:     tormentUsers[0].score,
+			UECount:   tormentUsers[0].ueCount,
+			PartyData: tormentUsers[0].partyData,
 		}
 	}
 
 	if len(lunaticUsers) > 0 {
 		sortFunc(lunaticUsers)
-		result.Lunatic = &types.MinUEUser{
-			UECount:    lunaticUsers[0].ueCount,
-			PartyCount: lunaticUsers[0].partyCount,
-			PartyData:  lunaticUsers[0].partyData,
+		lunatic = &types.MinUEUser{
+			Rank:      lunaticUsers[0].rank,
+			Score:     lunaticUsers[0].score,
+			UECount:   lunaticUsers[0].ueCount,
+			PartyData: lunaticUsers[0].partyData,
 		}
 	}
 
-	return result
+	return torment, lunatic
 }
 
 // GetMaxPartyUsers returns users who cleared with maximum party count
 // Returns separate results for Torment and Lunatic difficulties
-func GetMaxPartyUsers(partyData *types.BATormentPartyData) *types.MaxPartyUsers {
+func GetMaxPartyUsers(partyData *types.BATormentPartyData) (torment *types.MaxPartyUser, lunatic *types.MaxPartyUser) {
 	if len(partyData.PartyDetail) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	var tormentMax, lunaticMax *types.MaxPartyUser
+	// Check if this is INSANE difficulty (top score < TormentMinScore)
+	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
+
+	var tormentMaxCount, lunaticMaxCount int
 
 	for _, party := range partyData.PartyDetail {
 		// Only consider platinum users
@@ -468,26 +510,28 @@ func GetMaxPartyUsers(partyData *types.BATormentPartyData) *types.MaxPartyUsers 
 
 		// Classify by difficulty and track max
 		if party.Score >= constants.LunaticMinScore {
-			if lunaticMax == nil || partyCount > lunaticMax.PartyCount {
-				lunaticMax = &types.MaxPartyUser{
-					PartyCount: partyCount,
-					PartyData:  party.PartyData,
+			if partyCount > lunaticMaxCount {
+				lunaticMaxCount = partyCount
+				lunatic = &types.MaxPartyUser{
+					Rank:      party.Rank,
+					Score:     party.Score,
+					PartyData: party.PartyData,
 				}
 			}
-		} else if party.Score >= constants.TormentMinScore {
-			if tormentMax == nil || partyCount > tormentMax.PartyCount {
-				tormentMax = &types.MaxPartyUser{
-					PartyCount: partyCount,
-					PartyData:  party.PartyData,
+		} else if isInsane || party.Score >= constants.TormentMinScore {
+			// INSANE: all users go to torment
+			if partyCount > tormentMaxCount {
+				tormentMaxCount = partyCount
+				torment = &types.MaxPartyUser{
+					Rank:      party.Rank,
+					Score:     party.Score,
+					PartyData: party.PartyData,
 				}
 			}
 		}
 	}
 
-	return &types.MaxPartyUsers{
-		Torment: tormentMax,
-		Lunatic: lunaticMax,
-	}
+	return torment, lunatic
 }
 
 // GetHighImpactCharacters returns top 3 characters with the biggest score gap when missing
@@ -613,7 +657,15 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 
 	var querySQL string
 	if isEliminationRaid(contentID) {
-		querySQL = GetEliminationPlatinumCutSQL(ranks)
+		// For elimination raids, first check which point columns exist
+		existingColumns, err := getExistingPointColumns(db)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get existing columns: %w", err)
+		}
+		if len(existingColumns) == 0 {
+			return nil, fmt.Errorf("no point columns found for elimination raid")
+		}
+		querySQL = GetEliminationPlatinumCutSQL(ranks, existingColumns)
 	} else {
 		querySQL = GetPlatinumCutSQL(ranks)
 	}

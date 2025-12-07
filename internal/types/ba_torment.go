@@ -24,8 +24,6 @@ type BATormentSummaryData struct {
 	PlatinumCuts         []PlatinumCut         `json:"platinumCuts,omitempty"`
 	EssentialCharacters  []EssentialCharacter  `json:"essentialCharacters,omitempty"`
 	HighImpactCharacters []HighImpactCharacter `json:"highImpactCharacters,omitempty"`
-	MinUEUsers           *MinUEUsers           `json:"minUEUsers,omitempty"`
-	MaxPartyUsers        *MaxPartyUsers        `json:"maxPartyUsers,omitempty"`
 }
 
 // EssentialCharacter represents a character used by 70%+ of platinum users
@@ -44,27 +42,17 @@ type HighImpactCharacter struct {
 
 // MinUEUser represents a user who cleared with minimum unique equipment usage
 type MinUEUser struct {
-	UECount    int      `json:"ueCount"`
-	PartyCount int      `json:"partyCount"`
-	PartyData  [][6]int `json:"partyData"`
-}
-
-// MinUEUsers contains min UE users for each difficulty level
-type MinUEUsers struct {
-	Torment *MinUEUser `json:"torment,omitempty"`
-	Lunatic *MinUEUser `json:"lunatic,omitempty"`
+	Rank      int      `json:"rank"`
+	Score     int      `json:"score"`
+	UECount   int      `json:"ueCount"`
+	PartyData [][6]int `json:"partyData"`
 }
 
 // MaxPartyUser represents a user who cleared with maximum party count
 type MaxPartyUser struct {
-	PartyCount int      `json:"partyCount"`
-	PartyData  [][6]int `json:"partyData"`
-}
-
-// MaxPartyUsers contains max party users for each difficulty level
-type MaxPartyUsers struct {
-	Torment *MaxPartyUser `json:"torment,omitempty"`
-	Lunatic *MaxPartyUser `json:"lunatic,omitempty"`
+	Rank      int      `json:"rank"`
+	Score     int      `json:"score"`
+	PartyData [][6]int `json:"partyData"`
 }
 
 // PlatinumCut represents a score cutoff at a specific rank
@@ -75,9 +63,11 @@ type PlatinumCut struct {
 }
 
 type BATormentLevelData struct {
-	ClearCount  int              `json:"clearCount"`
-	PartyCounts map[string][]int `json:"partyCounts"`
-	Top5Partys  [][]any          `json:"top5Partys"`
+	ClearCount   int              `json:"clearCount"`
+	PartyCounts  map[string][]int `json:"partyCounts"`
+	Top5Partys   [][]any          `json:"top5Partys"`
+	MinUEUser    *MinUEUser       `json:"minUEUser,omitempty"`
+	MaxPartyUser *MaxPartyUser    `json:"maxPartyUser,omitempty"`
 }
 
 // ********************************************
