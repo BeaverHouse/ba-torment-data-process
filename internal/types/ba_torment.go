@@ -19,11 +19,9 @@ type BATormentPartyDetail struct {
 }
 
 type BATormentSummaryData struct {
-	Torment              BATormentLevelData    `json:"torment"`
-	Lunatic              BATormentLevelData    `json:"lunatic"`
-	PlatinumCuts         []PlatinumCut         `json:"platinumCuts,omitempty"`
-	EssentialCharacters  []EssentialCharacter  `json:"essentialCharacters,omitempty"`
-	HighImpactCharacters []HighImpactCharacter `json:"highImpactCharacters,omitempty"`
+	Torment      BATormentLevelData `json:"torment"`
+	Lunatic      BATormentLevelData `json:"lunatic"`
+	PlatinumCuts []PlatinumCut      `json:"platinumCuts,omitempty"`
 }
 
 // EssentialCharacter represents a character used by 70%+ of platinum users
@@ -32,12 +30,12 @@ type EssentialCharacter struct {
 	Ratio     float64 `json:"ratio"`
 }
 
-// HighImpactCharacter represents a character with high score impact when missing
+// HighImpactCharacter represents a character with high rank impact when missing
 type HighImpactCharacter struct {
-	StudentID  int `json:"studentId"`
-	ScoreGap   int `json:"scoreGap"`   // 1st place score - best score without this character
-	TopScore   int `json:"topScore"`   // 1st place score (with this character)
-	WithoutMax int `json:"withoutMax"` // best score without this character
+	StudentID       int `json:"studentId"`
+	RankGap         int `json:"rankGap"`         // WithoutBestRank - TopRank, or -1 if 100% usage
+	TopRank         int `json:"topRank"`         // best rank in this difficulty (uses this character)
+	WithoutBestRank int `json:"withoutBestRank"` // best rank achieved without this character (-1 if 100% usage)
 }
 
 // MinUEUser represents a user who cleared with minimum unique equipment usage
@@ -63,11 +61,13 @@ type PlatinumCut struct {
 }
 
 type BATormentLevelData struct {
-	ClearCount   int              `json:"clearCount"`
-	PartyCounts  map[string][]int `json:"partyCounts"`
-	Top5Partys   [][]any          `json:"top5Partys"`
-	MinUEUser    *MinUEUser       `json:"minUEUser,omitempty"`
-	MaxPartyUser *MaxPartyUser    `json:"maxPartyUser,omitempty"`
+	ClearCount           int                   `json:"clearCount"`
+	PartyCounts          map[string][]int      `json:"partyCounts"`
+	Top5Partys           [][]any               `json:"top5Partys"`
+	EssentialCharacters  []EssentialCharacter  `json:"essentialCharacters,omitempty"`
+	HighImpactCharacters []HighImpactCharacter `json:"highImpactCharacters,omitempty"`
+	MinUEUser            *MinUEUser            `json:"minUEUser,omitempty"`
+	MaxPartyUser         *MaxPartyUser         `json:"maxPartyUser,omitempty"`
 }
 
 // ********************************************

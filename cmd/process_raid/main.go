@@ -125,14 +125,16 @@ func main() {
 		}
 
 		// Add essential characters (70%+ usage in platinum ranks)
-		essentialChars := logic_duckdb.GetEssentialCharacters(partyData)
-		summaryData.EssentialCharacters = essentialChars
-		log.Printf("Essential characters for %s: %d characters with 70%%+ usage", contentID, len(essentialChars))
+		essentialTorment, essentialLunatic := logic_duckdb.GetEssentialCharacters(partyData)
+		summaryData.Torment.EssentialCharacters = essentialTorment
+		summaryData.Lunatic.EssentialCharacters = essentialLunatic
+		log.Printf("Essential characters for %s: Torment=%d, Lunatic=%d", contentID, len(essentialTorment), len(essentialLunatic))
 
 		// Add high impact characters (biggest score gap when missing)
-		highImpactChars := logic_duckdb.GetHighImpactCharacters(partyData)
-		summaryData.HighImpactCharacters = highImpactChars
-		log.Printf("High impact characters for %s: %d characters", contentID, len(highImpactChars))
+		highImpactTorment, highImpactLunatic := logic_duckdb.GetHighImpactCharacters(partyData)
+		summaryData.Torment.HighImpactCharacters = highImpactTorment
+		summaryData.Lunatic.HighImpactCharacters = highImpactLunatic
+		log.Printf("High impact characters for %s: Torment=%d, Lunatic=%d", contentID, len(highImpactTorment), len(highImpactLunatic))
 
 		// Add min UE users (users who cleared with minimum unique equipment)
 		minUETorment, minUELunatic := logic_duckdb.GetMinUEUsers(partyData)
