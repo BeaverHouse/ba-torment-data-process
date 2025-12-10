@@ -1,6 +1,6 @@
 module ba-torment-data-process
 
-go 1.25.2
+go 1.25.5
 
 require (
 	github.com/andybalholm/brotli v1.2.0
