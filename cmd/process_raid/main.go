@@ -124,7 +124,7 @@ func main() {
 			log.Printf("Added %d platinum cuts for %s", len(platinumCuts), contentID)
 		}
 
-		// Add part platinum cuts for elimination raids (individual part cuts from partyData)
+		// Add part platinum cuts for grand assault (individual part cuts from partyData)
 		if logic_duckdb.IsGrandAssault(contentID) {
 			partPlatinumCuts := logic_duckdb.GetPartPlatinumCutsFromPartyData(partyData)
 			if len(partPlatinumCuts) > 0 {

@@ -57,10 +57,10 @@ ORDER BY rank
 `, intSliceToSQL(ranks))
 }
 
-// GetEliminationPlatinumCutSQL returns SQL for getting combined scores at specific ranks for elimination raids (대결전)
+// GetPartialPlatinumCutSQL returns SQL for getting combined scores at specific ranks for grand assault (대결전)
 // It sums only the existing armor type point columns and ranks by total score
 // existingColumns should contain only columns that exist in the table (e.g., ["Light_point", "Heavy_point", "Special_point"])
-func GetEliminationPlatinumCutSQL(ranks []int, existingColumns []string) string {
+func GetPartialPlatinumCutSQL(ranks []int, existingColumns []string) string {
 	if len(existingColumns) == 0 {
 		return ""
 	}

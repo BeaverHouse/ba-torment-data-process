@@ -701,7 +701,7 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 }
 
 // GetPlatinumCuts retrieves score cutoffs at specific ranks (2000, 4000, ..., 20000)
-// For elimination raids, it uses combined scores from all armor types
+// For grand assault, it uses combined scores from all armor types
 func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut, error) {
 	dateString := startDate.Format("20060102")
 	dbFileName := fmt.Sprintf("%s.db", dateString)
@@ -723,7 +723,7 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 
 	var querySQL string
 	if IsGrandAssault(contentID) {
-		// For elimination raids, first check which point columns exist
+		// For grand assault, first check which point columns exist
 		existingColumns, err := getExistingPointColumns(db)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get existing columns: %w", err)
@@ -731,7 +731,7 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 		if len(existingColumns) == 0 {
 			return nil, fmt.Errorf("no point columns found for elimination raid")
 		}
-		querySQL = GetEliminationPlatinumCutSQL(ranks, existingColumns)
+		querySQL = GetPartialPlatinumCutSQL(ranks, existingColumns)
 	} else {
 		querySQL = GetPlatinumCutSQL(ranks)
 	}
@@ -761,7 +761,7 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 	return cuts, nil
 }
 
-// GetPartPlatinumCutsFromPartyData extracts platinum cuts from partyData for elimination raids (대결전)
+// GetPartPlatinumCutsFromPartyData extracts platinum cuts from partyData for grand assault (대결전)
 // This uses the partyData's rank order directly instead of querying DuckDB
 func GetPartPlatinumCutsFromPartyData(partyData *types.BATormentPartyData) []types.PlatinumCut {
 	if partyData == nil || len(partyData.PartyDetail) == 0 {

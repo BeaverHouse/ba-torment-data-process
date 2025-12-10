@@ -22,7 +22,7 @@ type BATormentSummaryData struct {
 	Torment          BATormentLevelData `json:"torment"`
 	Lunatic          BATormentLevelData `json:"lunatic"`
 	PlatinumCuts     []PlatinumCut      `json:"platinumCuts,omitempty"`
-	PartPlatinumCuts []PlatinumCut      `json:"partPlatinumCuts,omitempty"` // For elimination raids: individual part cuts
+	PartPlatinumCuts []PlatinumCut      `json:"partPlatinumCuts,omitempty"` // For grand assault: individual part cuts
 }
 
 // EssentialCharacter represents a character used by 70%+ of platinum users
