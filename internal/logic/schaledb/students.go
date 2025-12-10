@@ -233,7 +233,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 			log.Printf("Failed to unmarshal student data for ID %s: %v", studentID, err)
 			continue
 		}
-		studentIDInt, err := strconv.Atoi(studentID)
+		studentIDInt64, err := strconv.ParseInt(studentID, 10, 32)
 		if err != nil {
 			log.Printf("Failed to convert student ID %s to int: %v", studentID, err)
 			continue
@@ -245,7 +245,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		}
 
 		db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
-			StudentID:     int32(studentIDInt),
+			StudentID:     int32(studentIDInt64),
 			NameKo:        completeData.Name,
 			NameJa:        japaneseStudentInfo[studentID].Name,
 			SearchKeyword: append(completeData.SearchTags, japaneseStudentInfo[studentID].SearchTags...),
@@ -255,7 +255,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		studentMap[studentID] = completeData.Name
 
 		// Upload image + wait 3 second. Supabase S3 has performance issue when uploading too many files at once.
-		err = uploadCharacterImage(studentIDInt, false)
+		err = uploadCharacterImage(int(studentIDInt64), false)
 		if err != nil {
 			log.Printf("Failed to upload image for student %s: %v", studentID, err)
 			return nil, err
