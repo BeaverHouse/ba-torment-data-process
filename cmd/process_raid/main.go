@@ -124,6 +124,15 @@ func main() {
 			log.Printf("Added %d platinum cuts for %s", len(platinumCuts), contentID)
 		}
 
+		// Add part platinum cuts for elimination raids (individual part cuts from partyData)
+		if logic_duckdb.IsGrandAssault(contentID) {
+			partPlatinumCuts := logic_duckdb.GetPartPlatinumCutsFromPartyData(partyData)
+			if len(partPlatinumCuts) > 0 {
+				summaryData.PartPlatinumCuts = partPlatinumCuts
+				log.Printf("Added %d part platinum cuts for %s", len(partPlatinumCuts), contentID)
+			}
+		}
+
 		// Add essential characters (70%+ usage in platinum ranks)
 		essentialTorment, essentialLunatic := logic_duckdb.GetEssentialCharacters(partyData)
 		summaryData.Torment.EssentialCharacters = essentialTorment

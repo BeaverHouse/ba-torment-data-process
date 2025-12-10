@@ -291,9 +291,9 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 	return partyMembers, nil
 }
 
-// isEliminationRaid checks if the contentID represents an elimination raid (대결전)
-// Elimination raids have contentID starting with "3S" (e.g., "3S3-1")
-func isEliminationRaid(contentID string) bool {
+// IsGrandAssault checks if the contentID represents an grand assault (대결전)
+// Grand assaults have contentID starting with "3S" (e.g., "3S3-1")
+func IsGrandAssault(contentID string) bool {
 	return strings.HasPrefix(contentID, "3S")
 }
 
@@ -722,7 +722,7 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 	ranks := []int{2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
 
 	var querySQL string
-	if isEliminationRaid(contentID) {
+	if IsGrandAssault(contentID) {
 		// For elimination raids, first check which point columns exist
 		existingColumns, err := getExistingPointColumns(db)
 		if err != nil {
@@ -759,4 +759,30 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 	}
 
 	return cuts, nil
+}
+
+// GetPartPlatinumCutsFromPartyData extracts platinum cuts from partyData for elimination raids (대결전)
+// This uses the partyData's rank order directly instead of querying DuckDB
+func GetPartPlatinumCutsFromPartyData(partyData *types.BATormentPartyData) []types.PlatinumCut {
+	if partyData == nil || len(partyData.PartyDetail) == 0 {
+		return nil
+	}
+
+	// Target ranks: 2000, 4000, 6000, ..., 20000
+	targetRanks := []int{2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
+
+	var cuts []types.PlatinumCut
+	for _, targetRank := range targetRanks {
+		for _, party := range partyData.PartyDetail {
+			if party.Rank == targetRank {
+				cuts = append(cuts, types.PlatinumCut{
+					Rank:  party.Rank,
+					Score: party.Score,
+				})
+				break
+			}
+		}
+	}
+
+	return cuts
 }
