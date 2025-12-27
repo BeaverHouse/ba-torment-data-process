@@ -51,8 +51,11 @@ func createVideoFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter
 func CreateLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFilter {
 	var partyTeams [][6]int
 
-	// Filter parties with score >= LunaticMinScore
+	// Filter parties with score >= LunaticMinScore and rank <= 20000
 	for _, party := range partyData.PartyDetail {
+		if party.Rank > 20000 {
+			continue
+		}
 		if party.Score >= constants.LunaticMinScore {
 			partyTeams = append(partyTeams, party.PartyData...)
 		}
@@ -66,7 +69,11 @@ func CreateNonLunaticFilter(partyData *types.BATormentPartyData) *types.BATormen
 
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
+	// Filter parties with score in range and rank <= 20000
 	for _, party := range partyData.PartyDetail {
+		if party.Rank > 20000 {
+			continue
+		}
 		maxScore := constants.LunaticMinScore
 		minScore := constants.TormentMinScore
 		if isInsane {
