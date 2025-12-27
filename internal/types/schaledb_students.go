@@ -102,11 +102,11 @@ type SkillEffect struct {
 	Hits                 []int                 `json:"Hits,omitempty"`
 	ExtraStatRate        []int                 `json:"ExtraStatRate,omitempty"`
 	ExtraStatSource      string                `json:"ExtraStatSource,omitempty"`
-	HpRateDamageModifier *HpRateDamageModifier `json:"HpRateDamageModifier,omitempty"`
+	TargetHpRateModifier *TargetHpRateModifier `json:"TargetHpRateModifier,omitempty"`
 }
 
 // HP-based damage modifier
-type HpRateDamageModifier struct {
+type TargetHpRateModifier struct {
 	MaxHpRate     int     `json:"MaxHpRate"`
 	MinHpRate     int     `json:"MinHpRate"`
 	MultiplierMax float64 `json:"MultiplierMax"`
