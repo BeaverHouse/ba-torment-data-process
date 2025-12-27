@@ -17,6 +17,9 @@ func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
 	for _, data := range partyData.PartyDetail {
+		if data.Rank > 20000 {
+			continue
+		}
 		if data.Score >= constants.LunaticMinScore {
 			lunaticData = append(lunaticData, data)
 		} else {
