@@ -50,3 +50,32 @@ func (q *Queries) ListContentIDs(ctx context.Context) ([]string, error) {
 	}
 	return items, nil
 }
+
+const listContentIDsWithStartDate = `-- name: ListContentIDsWithStartDate :many
+SELECT content_id, start_date FROM batorment_v3.contents WHERE deleted_at IS NULL ORDER BY start_date ASC
+`
+
+type ListContentIDsWithStartDateRow struct {
+	ContentID string             `json:"content_id"`
+	StartDate pgtype.Timestamptz `json:"start_date"`
+}
+
+func (q *Queries) ListContentIDsWithStartDate(ctx context.Context) ([]ListContentIDsWithStartDateRow, error) {
+	rows, err := q.db.Query(ctx, listContentIDsWithStartDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListContentIDsWithStartDateRow{}
+	for rows.Next() {
+		var i ListContentIDsWithStartDateRow
+		if err := rows.Scan(&i.ContentID, &i.StartDate); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
