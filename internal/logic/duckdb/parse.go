@@ -132,21 +132,21 @@ func ParseDuckDB(contentID string, startDate time.Time) (*types.BATormentPartyDa
 }
 
 // removeFraudUsers removes known fraudulent user data and adjusts ranks
-// S80-0 rank 13622: User with Mika (10059) star 1, UE3 (studentDetailID contains 10059130)
+// S80-0 rank 13622: User with Mika (10059) star 5, UE1 (studentDetailID contains 10059510)
 func removeFraudUsers(contentID string, partyData *types.BATormentPartyData) {
 	if contentID != "S80-0" {
 		return
 	}
 
-	// Find the fraud user at rank 13622 with Mika star 1 UE3 (10059130)
+	// Find the fraud user at rank 13622 with Mika star 5 UE1 (studentDetailID 10059510)
 	fraudIndex := -1
 	for i, party := range partyData.PartyDetail {
 		if party.Rank == 13622 {
-			// Check if this user has Mika star 1 UE3 (studentDetailID 10059130)
+			// Check if this user has Mika star 5 UE1 (studentDetailID 10059510)
 			hasFraudChar := false
 			for _, members := range party.PartyData {
 				for _, member := range members {
-					if member == 10059130 {
+					if member == 10059510 {
 						hasFraudChar = true
 						break
 					}
