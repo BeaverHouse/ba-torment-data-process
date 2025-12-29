@@ -125,7 +125,57 @@ func ParseDuckDB(contentID string, startDate time.Time) (*types.BATormentPartyDa
 		return nil, nil, fmt.Errorf("no details found for armor type: %s", armorType)
 	}
 
+	// Apply fraud user cleanup for specific content
+	removeFraudUsers(contentID, partyData)
+
 	return partyData, filterResult, nil
+}
+
+// removeFraudUsers removes known fraudulent user data and adjusts ranks
+// S80-0 rank 13622: User with Mika (10059) star 1, UE3 (studentDetailID contains 10059130)
+func removeFraudUsers(contentID string, partyData *types.BATormentPartyData) {
+	if contentID != "S80-0" {
+		return
+	}
+
+	// Find the fraud user at rank 13622 with Mika star 1 UE3 (10059130)
+	fraudIndex := -1
+	for i, party := range partyData.PartyDetail {
+		if party.Rank == 13622 {
+			// Check if this user has Mika star 1 UE3 (studentDetailID 10059130)
+			hasFraudChar := false
+			for _, members := range party.PartyData {
+				for _, member := range members {
+					if member == 10059130 {
+						hasFraudChar = true
+						break
+					}
+				}
+				if hasFraudChar {
+					break
+				}
+			}
+			if hasFraudChar {
+				fraudIndex = i
+				log.Printf("Found fraud user at rank 13622 with Mika star1 UE3 in S80-0")
+			}
+			break
+		}
+	}
+
+	if fraudIndex == -1 {
+		return
+	}
+
+	// Remove the fraud entry
+	partyData.PartyDetail = append(partyData.PartyDetail[:fraudIndex], partyData.PartyDetail[fraudIndex+1:]...)
+
+	// Shift ranks for all entries after the removed one (13623+ becomes 13622+)
+	for i := fraudIndex; i < len(partyData.PartyDetail); i++ {
+		partyData.PartyDetail[i].Rank--
+	}
+
+	log.Printf("Removed fraud user and adjusted %d ranks", len(partyData.PartyDetail)-fraudIndex)
 }
 
 func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, *types.BATormentFilter, error) {
