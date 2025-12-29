@@ -14,6 +14,8 @@ type Querier interface {
 	InsertPresent(ctx context.Context, arg InsertPresentParams) error
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
 	ListContentIDs(ctx context.Context) ([]string, error)
+	ListContentIDsWithStartDate(ctx context.Context) ([]ListContentIDsWithStartDateRow, error)
+	ListContentsForRaidList(ctx context.Context) ([]ListContentsForRaidListRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -17,6 +17,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// RaidListItem represents an item in raids.json
+type RaidListItem struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	TopLevel     string `json:"top_level"`
+	PartyUpdated bool   `json:"party_updated"`
+}
+
 func main() {
 	if logic.IsLocalEnv() {
 		if err := godotenv.Load(); err != nil {
@@ -33,12 +41,17 @@ func main() {
 
 	queries := postgres.New(pool)
 
-	contentIDs, err := queries.ListContentIDs(context.Background())
+	// Get all contents for raid list
+	contents, err := queries.ListContentsForRaidList(context.Background())
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to list content IDs: %w", err))
+		log.Fatal(fmt.Errorf("failed to list contents: %w", err))
 	}
 
-	for _, contentID := range contentIDs {
+	// Track party_updated status for each content
+	partyUpdated := make(map[string]bool)
+
+	for _, content := range contents {
+		contentID := content.ContentID
 		log.Printf("\n=== Processing content: %s ===", contentID)
 
 		contentInfo, err := queries.GetContentByID(context.Background(), contentID)
@@ -51,8 +64,10 @@ func main() {
 		partyData, filterResult, err := logic_duckdb.ParseDuckDB(contentID, contentInfo.StartDate.Time)
 		if err != nil {
 			log.Printf("Skipping content %s: %v", contentID, err)
+			partyUpdated[contentID] = false
 			continue
 		}
+		partyUpdated[contentID] = true
 
 		fileName := fmt.Sprintf("%s.json", contentID)
 
@@ -173,6 +188,22 @@ func main() {
 		}
 
 		log.Printf("✓ Successfully processed content: %s\n", contentID)
+	}
+
+	// Generate raids.json
+	log.Println("\n=== Generating raids.json ===")
+	var raidList []RaidListItem
+	for _, content := range contents {
+		raidList = append(raidList, RaidListItem{
+			ID:           content.ContentID,
+			Name:         content.Title,
+			TopLevel:     string(content.TopLevel),
+			PartyUpdated: partyUpdated[content.ContentID],
+		})
+	}
+
+	if err := logic_upload.MarshalAndUpload(raidList, "batorment/v3", "raids.json", *dryRun, "Raids list uploaded"); err != nil {
+		log.Printf("Failed to upload raids.json: %v", err)
 	}
 
 	fmt.Println("\n=== Successfully processed all raids ===")
