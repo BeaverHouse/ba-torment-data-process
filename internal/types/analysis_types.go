@@ -50,6 +50,9 @@ type CharacterAnalysisResult struct {
 	StarDistribution []RaidStarDistribution `json:"starDistribution"`
 	AssistStats      AssistUsageStats       `json:"assistStats"`
 	TopSynergyChars  []CharacterSynergy     `json:"topSynergyChars"`
+	TotalUsage       int                    `json:"totalUsage"`
+	OverallRank      int                    `json:"overallRank"`
+	CategoryRank     int                    `json:"categoryRank"`
 }
 
 // TotalAnalysisOutput represents the final output of total analysis
