@@ -2,11 +2,20 @@ package analysis
 
 import (
 	"sort"
+	"strings"
 
 	"ba-torment-data-process/internal/types"
 )
 
 const PlatinumRankLimit = 20000
+
+// ExtractGroupID extracts group ID from content_id (e.g., "3S26-1" -> "3S26")
+func ExtractGroupID(contentID string) string {
+	if idx := strings.Index(contentID, "-"); idx != -1 {
+		return contentID[:idx]
+	}
+	return contentID
+}
 
 // ParseStudentDetailID extracts studentID, star, weaponStar, isAssist from detailID
 // Format: {studentID(5)}{star(1)}{weaponStar(1)}{isAssist(1)}
