@@ -134,22 +134,25 @@ func analyzeCharacterInRaid(studentID int, partyData *types.BATormentPartyData) 
 		}
 
 		isLunatic := party.Score >= constants.LunaticMinScore
-		foundInParty := false
-		var partyMembers []int
+		foundInAnySquad := false
 
-		for _, members := range party.PartyData {
-			for _, member := range members {
+		for _, squad := range party.PartyData {
+			var squadMembers []int
+			foundInThisSquad := false
+
+			for _, member := range squad {
 				if member == 0 {
 					continue
 				}
 
 				memberStudentID, star, weaponStar, isAssist := ParseStudentDetailID(member)
 
-				// Collect party members for synergy
-				partyMembers = append(partyMembers, memberStudentID)
+				// Collect squad members for synergy
+				squadMembers = append(squadMembers, memberStudentID)
 
 				if memberStudentID == studentID {
-					foundInParty = true
+					foundInThisSquad = true
+					foundInAnySquad = true
 
 					if isAssist {
 						asAssist++
@@ -167,16 +170,19 @@ func analyzeCharacterInRaid(studentID int, partyData *types.BATormentPartyData) 
 					}
 				}
 			}
-		}
 
-		if foundInParty {
-			appearances++
-			// Count co-usage characters
-			for _, memberID := range partyMembers {
-				if memberID != studentID {
-					coChars[memberID]++
+			// Count co-usage only for squads where this character appears
+			if foundInThisSquad {
+				for _, memberID := range squadMembers {
+					if memberID != studentID {
+						coChars[memberID]++
+					}
 				}
 			}
+		}
+
+		if foundInAnySquad {
+			appearances++
 		}
 	}
 
