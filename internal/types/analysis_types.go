@@ -45,14 +45,14 @@ type CharacterSynergy struct {
 
 // CharacterAnalysisResult represents analysis result for a single character
 type CharacterAnalysisResult struct {
-	StudentID        int                    `json:"studentId"`
-	UsageHistory     []RaidUsage            `json:"usageHistory"`
-	StarDistribution []RaidStarDistribution `json:"starDistribution"`
-	AssistStats      AssistUsageStats       `json:"assistStats"`
-	TopSynergyChars  []CharacterSynergy     `json:"topSynergyChars"`
-	TotalUsage       int                    `json:"totalUsage"`
-	OverallRank      int                    `json:"overallRank"`
-	CategoryRank     int                    `json:"categoryRank"`
+	StudentID        int                  `json:"studentId"`
+	UsageHistory     []RaidUsage          `json:"usageHistory"`
+	StarDistribution *RaidStarDistribution `json:"starDistribution"` // Latest distribution (200+ usage), null if none
+	AssistStats      AssistUsageStats     `json:"assistStats"`
+	TopSynergyChars  []CharacterSynergy   `json:"topSynergyChars"`
+	TotalUsage       int                  `json:"totalUsage"`
+	OverallRank      int                  `json:"overallRank"`
+	CategoryRank     int                  `json:"categoryRank"`
 }
 
 // TotalAnalysisOutput represents the final output of total analysis

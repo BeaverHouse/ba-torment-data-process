@@ -79,15 +79,16 @@ func AnalyzeCharacter(studentID int, partyDataMap map[string]*types.BATormentPar
 		totalAppearances += appearances
 	}
 
-	// Build starDistribution from grouped data
-	var starDistribution []types.RaidStarDistribution
-	for _, groupID := range groupOrder {
-		// Only include star distribution if own usage (excluding assist) >= 200 (1%)
+	// Get latest star distribution (200+ own usage)
+	var starDistribution *types.RaidStarDistribution
+	for i := len(groupOrder) - 1; i >= 0; i-- {
+		groupID := groupOrder[i]
 		if groupAsOwn[groupID] >= 200 {
-			starDistribution = append(starDistribution, types.RaidStarDistribution{
+			starDistribution = &types.RaidStarDistribution{
 				RaidID:       groupID,
 				Distribution: groupStar[groupID],
-			})
+			}
+			break
 		}
 	}
 
