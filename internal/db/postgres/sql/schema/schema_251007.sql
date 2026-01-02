@@ -54,10 +54,23 @@ CREATE TABLE batorment_v3.presents (
     updated_at TIMESTAMP
 );
 
+-- Table for i18n translations (school, club, etc.)
+CREATE TABLE batorment_v3.i18n (
+    category VARCHAR(20) NOT NULL,
+    key VARCHAR(50) NOT NULL,
+    name_ko VARCHAR(100) NOT NULL,
+    name_ja VARCHAR(100) NOT NULL,
+    name_en VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    PRIMARY KEY (category, key)
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_students_name ON batorment_v3.students(name_ko);
 CREATE INDEX IF NOT EXISTS idx_students_name_ja ON batorment_v3.students(name_ja);
 CREATE INDEX IF NOT EXISTS idx_students_details ON batorment_v3.students USING GIN (detail);
 CREATE INDEX IF NOT EXISTS idx_presents_name ON batorment_v3.presents(name_ko);
 CREATE INDEX IF NOT EXISTS idx_presents_tags ON batorment_v3.presents USING GIN (tags);
+CREATE INDEX IF NOT EXISTS idx_i18n_category ON batorment_v3.i18n(category);
 

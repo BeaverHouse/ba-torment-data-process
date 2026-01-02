@@ -10,12 +10,15 @@ import (
 
 type Querier interface {
 	GetContentByID(ctx context.Context, contentID string) (GetContentByIDRow, error)
+	GetI18n(ctx context.Context, arg GetI18nParams) (BatormentV3I18n, error)
+	GetI18nByCategory(ctx context.Context, category string) ([]BatormentV3I18n, error)
 	GetVerifiedYoutubeAnalysisByRaidID(ctx context.Context, raidID string) ([]GetVerifiedYoutubeAnalysisByRaidIDRow, error)
 	InsertPresent(ctx context.Context, arg InsertPresentParams) error
 	InsertStudentData(ctx context.Context, arg InsertStudentDataParams) error
 	ListContentIDs(ctx context.Context) ([]string, error)
 	ListContentIDsWithStartDate(ctx context.Context) ([]ListContentIDsWithStartDateRow, error)
 	ListContentsForRaidList(ctx context.Context) ([]ListContentsForRaidListRow, error)
+	UpsertI18n(ctx context.Context, arg UpsertI18nParams) error
 }
 
 var _ Querier = (*Queries)(nil)

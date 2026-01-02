@@ -108,6 +108,16 @@ type BatormentV3Content struct {
 	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type BatormentV3I18n struct {
+	Category  string           `json:"category"`
+	Key       string           `json:"key"`
+	NameKo    string           `json:"name_ko"`
+	NameJa    string           `json:"name_ja"`
+	NameEn    string           `json:"name_en"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+}
+
 type BatormentV3Present struct {
 	PresentID int32            `json:"present_id"`
 	NameKo    string           `json:"name_ko"`

@@ -31,5 +31,10 @@ func main() {
 		log.Fatalf("Failed to parse SchaleDB presents: %v", err)
 	}
 
-	log.Println("Successfully parsed SchaleDB students")
+	err = schaledb.SaveI18nData(queries)
+	if err != nil {
+		log.Fatalf("Failed to save i18n data: %v", err)
+	}
+
+	log.Println("Successfully updated from SchaleDB")
 }
