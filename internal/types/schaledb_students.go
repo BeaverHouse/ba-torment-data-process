@@ -87,22 +87,27 @@ type StudentSkill struct {
 // Skill effect
 type SkillEffect struct {
 	Type                 string                `json:"Type"`
+	Restrictions         []SkillRestriction    `json:"Restrictions,omitempty"`
 	Target               []string              `json:"Target,omitempty"`
 	Scale                []int                 `json:"Scale,omitempty"`
 	Value                [][]int               `json:"Value,omitempty"`
 	AdditionalValue      any                   `json:"AdditionalValue,omitempty"`
-	Channel              int                   `json:"Channel,omitempty"`
 	Stat                 string                `json:"Stat,omitempty"`
 	Duration             int                   `json:"Duration,omitempty"`
 	Period               int                   `json:"Period,omitempty"`
-	ApplyFrame           int                   `json:"ApplyFrame,omitempty"`
 	Block                int                   `json:"Block,omitempty"`
 	CriticalCheck        string                `json:"CriticalCheck,omitempty"`
-	DescParamId          int                   `json:"DescParamId,omitempty"`
 	Hits                 []int                 `json:"Hits,omitempty"`
 	ExtraStatRate        []int                 `json:"ExtraStatRate,omitempty"`
 	ExtraStatSource      string                `json:"ExtraStatSource,omitempty"`
 	TargetHpRateModifier *TargetHpRateModifier `json:"TargetHpRateModifier,omitempty"`
+}
+
+// Skill restriction (e.g., BulletType == Pierce)
+type SkillRestriction struct {
+	Property string `json:"Property"`
+	Operand  string `json:"Operand"`
+	Value    string `json:"Value"`
 }
 
 // HP-based damage modifier
