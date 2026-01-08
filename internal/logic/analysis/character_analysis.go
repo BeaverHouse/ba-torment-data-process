@@ -31,7 +31,11 @@ func RunCharacterAnalyses(partyDataMap map[string]*types.BATormentPartyData, sor
 // sortedContentIDs provides the order for usageHistory (sorted by start_date)
 func AnalyzeCharacter(studentID int, partyDataMap map[string]*types.BATormentPartyData, sortedContentIDs []string) types.CharacterAnalysisResult {
 	var usageHistory []types.RaidUsage
-	var starDistribution []types.RaidStarDistribution
+
+	// Group star distribution by groupID (e.g., "3S26-1", "3S26-3" -> "3S26")
+	groupStar := make(map[string]map[string]int)
+	groupAsOwn := make(map[string]int)
+	var groupOrder []string // Track order of first appearance
 
 	totalAsAssist := 0
 	totalAsOwn := 0
@@ -47,19 +51,24 @@ func AnalyzeCharacter(studentID int, partyDataMap map[string]*types.BATormentPar
 		}
 		raidUsage, raidStar, asAssist, asOwn, coChars, appearances := analyzeCharacterInRaid(studentID, partyData)
 
+		// usageHistory: individual raid entries (no grouping)
 		usageHistory = append(usageHistory, types.RaidUsage{
 			RaidID:           raidID,
 			UserCount:        raidUsage.UserCount,
 			LunaticUserCount: raidUsage.LunaticUserCount,
 		})
 
-		// Only include star distribution if own usage (excluding assist) >= 200 (1%)
-		if asOwn >= 200 {
-			starDistribution = append(starDistribution, types.RaidStarDistribution{
-				RaidID:       raidID,
-				Distribution: raidStar,
-			})
+		// starDistribution: group by groupID
+		groupID := ExtractGroupID(raidID)
+		if _, exists := groupStar[groupID]; !exists {
+			groupStar[groupID] = make(map[string]int)
+			groupOrder = append(groupOrder, groupID)
 		}
+
+		for key, count := range raidStar {
+			groupStar[groupID][key] += count
+		}
+		groupAsOwn[groupID] += asOwn
 
 		totalAsAssist += asAssist
 		totalAsOwn += asOwn
@@ -68,6 +77,19 @@ func AnalyzeCharacter(studentID int, partyDataMap map[string]*types.BATormentPar
 			coUsageCount[coCharID] += count
 		}
 		totalAppearances += appearances
+	}
+
+	// Get latest star distribution (200+ own usage)
+	var starDistribution *types.RaidStarDistribution
+	for i := len(groupOrder) - 1; i >= 0; i-- {
+		groupID := groupOrder[i]
+		if groupAsOwn[groupID] >= 200 {
+			starDistribution = &types.RaidStarDistribution{
+				RaidID:       groupID,
+				Distribution: groupStar[groupID],
+			}
+			break
+		}
 	}
 
 	// Calculate synergy (top 3, >= 5%)
@@ -112,22 +134,25 @@ func analyzeCharacterInRaid(studentID int, partyData *types.BATormentPartyData) 
 		}
 
 		isLunatic := party.Score >= constants.LunaticMinScore
-		foundInParty := false
-		var partyMembers []int
+		foundInAnySquad := false
 
-		for _, members := range party.PartyData {
-			for _, member := range members {
+		for _, squad := range party.PartyData {
+			var squadMembers []int
+			foundInThisSquad := false
+
+			for _, member := range squad {
 				if member == 0 {
 					continue
 				}
 
 				memberStudentID, star, weaponStar, isAssist := ParseStudentDetailID(member)
 
-				// Collect party members for synergy
-				partyMembers = append(partyMembers, memberStudentID)
+				// Collect squad members for synergy
+				squadMembers = append(squadMembers, memberStudentID)
 
 				if memberStudentID == studentID {
-					foundInParty = true
+					foundInThisSquad = true
+					foundInAnySquad = true
 
 					if isAssist {
 						asAssist++
@@ -145,16 +170,19 @@ func analyzeCharacterInRaid(studentID int, partyData *types.BATormentPartyData) 
 					}
 				}
 			}
-		}
 
-		if foundInParty {
-			appearances++
-			// Count co-usage characters
-			for _, memberID := range partyMembers {
-				if memberID != studentID {
-					coChars[memberID]++
+			// Count co-usage only for squads where this character appears
+			if foundInThisSquad {
+				for _, memberID := range squadMembers {
+					if memberID != studentID {
+						coChars[memberID]++
+					}
 				}
 			}
+		}
+
+		if foundInAnySquad {
+			appearances++
 		}
 	}
 

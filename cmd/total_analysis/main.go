@@ -60,8 +60,8 @@ func main() {
 	// Upload result
 	err = logic_upload.MarshalAndUpload(
 		result,
-		"batorment/v3/total-analysis",
-		"analysis.json",
+		"batorment/v3",
+		"total-analysis.json",
 		*dryRun,
 		"Total analysis completed",
 	)

@@ -66,7 +66,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 			log.Fatalf("API request failed: %v", err)
 		}
 
-		req.Header.Set("X-Access-Token", logic.GetEnv("FILE_MANAGER_SERVICE_API_KEY", ""))
+		req.Header.Set("X-Access-Token", logic.GetEnv("BA_ANALYZER_SERVICE_TOKEN", ""))
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		client := &http.Client{}
