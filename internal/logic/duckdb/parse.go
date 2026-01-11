@@ -768,8 +768,8 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 	}
 	defer db.Close()
 
-	// Target ranks: 2000, 4000, 6000, ..., 20000
-	ranks := []int{2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
+	// Target ranks: 100, 200, 500, 1000, 2000, 4000, 6000, ..., 20000
+	ranks := []int{100, 200, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
 
 	var querySQL string
 	if IsGrandAssault(contentID) {
@@ -818,8 +818,8 @@ func GetPartPlatinumCutsFromPartyData(partyData *types.BATormentPartyData) []typ
 		return nil
 	}
 
-	// Target ranks: 2000, 4000, 6000, ..., 20000
-	targetRanks := []int{2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
+	// Target ranks: 100, 200, 500, 1000, 2000, 4000, 6000, ..., 20000
+	targetRanks := []int{100, 200, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
 
 	var cuts []types.PlatinumCut
 	for _, targetRank := range targetRanks {
