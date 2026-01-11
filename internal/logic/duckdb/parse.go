@@ -392,7 +392,7 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []type
 
 	for _, party := range partyData.PartyDetail {
 		// Only count platinum ranks (top 20000)
-		if party.Rank > 20000 {
+		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 
@@ -490,7 +490,7 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUse
 
 	for _, party := range partyData.PartyDetail {
 		// Only consider platinum users
-		if party.Rank > 20000 {
+		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 
@@ -580,7 +580,7 @@ func GetMaxPartyUsers(partyData *types.BATormentPartyData) (torment *types.MaxPa
 
 	for _, party := range partyData.PartyDetail {
 		// Only consider platinum users
-		if party.Rank > 20000 {
+		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 
@@ -634,7 +634,7 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 	var tormentParties, lunaticParties []partyInfo
 
 	for _, party := range partyData.PartyDetail {
-		if party.Rank > 20000 {
+		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 

@@ -1,13 +1,14 @@
 package parse
 
 import (
-	"ba-torment-data-process/internal/constants"
-	"ba-torment-data-process/internal/logic"
-	"ba-torment-data-process/internal/types"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+
+	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/logic"
+	"ba-torment-data-process/internal/types"
 )
 
 func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.BATormentSummaryData, error) {
@@ -17,7 +18,7 @@ func ProcessPartyDataToSummaryData(partyData *types.BATormentPartyData) (*types.
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
 	for _, data := range partyData.PartyDetail {
-		if data.Rank > 20000 {
+		if data.Rank > constants.PlatinumRankLimit {
 			continue
 		}
 		if data.Score >= constants.LunaticMinScore {

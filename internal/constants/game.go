@@ -10,4 +10,7 @@ const (
 	//
 	// Baseline: 20PT full timeout
 	TormentMinScore = 31076000
+
+	// PlatinumRankLimit is the maximum rank for platinum tier
+	PlatinumRankLimit = 20000
 )

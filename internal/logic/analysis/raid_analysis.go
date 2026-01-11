@@ -30,7 +30,7 @@ func AnalyzeRaid(raidID string, partyData *types.BATormentPartyData) types.RaidA
 	lunaticClearCount := 0
 
 	for _, party := range partyData.PartyDetail {
-		if party.Rank > PlatinumRankLimit {
+		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 

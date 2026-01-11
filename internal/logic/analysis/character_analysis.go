@@ -129,7 +129,7 @@ func analyzeCharacterInRaid(studentID int, partyData *types.BATormentPartyData) 
 	lunaticUserCount := 0
 
 	for _, party := range partyData.PartyDetail {
-		if party.Rank > PlatinumRankLimit {
+		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 
@@ -200,34 +200,23 @@ func calculateTopSynergy(coUsageCount map[int]int, totalAppearances int, n int) 
 		return nil
 	}
 
-	type kv struct {
-		Key   int
-		Value int
-	}
-
-	var candidates []kv
+	// Filter to >= 5% threshold
+	filtered := make(map[int]int)
 	for k, v := range coUsageCount {
-		rate := float64(v) / float64(totalAppearances)
-		if rate >= 0.05 { // 5% threshold
-			candidates = append(candidates, kv{k, v})
+		if float64(v)/float64(totalAppearances) >= 0.05 {
+			filtered[k] = v
 		}
 	}
 
-	sort.Slice(candidates, func(i, j int) bool {
-		if candidates[i].Value != candidates[j].Value {
-			return candidates[i].Value > candidates[j].Value
-		}
-		return candidates[i].Key < candidates[j].Key
-	})
+	sorted := sortMapDescending(filtered)
 
 	var result []types.CharacterSynergy
-	for i := 0; i < n && i < len(candidates); i++ {
+	for i := 0; i < n && i < len(sorted); i++ {
 		result = append(result, types.CharacterSynergy{
-			StudentID:    candidates[i].Key,
-			CoUsageRate:  float64(candidates[i].Value) / float64(totalAppearances),
-			CoUsageCount: candidates[i].Value,
+			StudentID:    sorted[i].Key,
+			CoUsageRate:  float64(sorted[i].Value) / float64(totalAppearances),
+			CoUsageCount: sorted[i].Value,
 		})
 	}
-
 	return result
 }
