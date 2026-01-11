@@ -50,18 +50,6 @@ func collectAllStudentIDs(partyDataMap map[string]*types.BATormentPartyData) map
 	return result
 }
 
-// getPlatinumUserCount returns the count of platinum users (rank <= 20000)
-func getPlatinumUserCount(partyData *types.BATormentPartyData) int {
-	count := 0
-	for _, party := range partyData.PartyDetail {
-		if party.Rank > constants.PlatinumRankLimit {
-			break
-		}
-		count++
-	}
-	return count
-}
-
 // intKV is a key-value pair for sorting map[int]int
 type intKV struct {
 	Key   int
