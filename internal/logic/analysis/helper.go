@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
 )
 
@@ -14,16 +15,6 @@ func ExtractGroupID(contentID string) string {
 		return contentID[:idx]
 	}
 	return contentID
-}
-
-// ParseStudentDetailID extracts studentID, star, weaponStar, isAssist from detailID
-// Format: {studentID(5)}{star(1)}{weaponStar(1)}{isAssist(1)}
-func ParseStudentDetailID(detailID int) (studentID int, star int, weaponStar int, isAssist bool) {
-	studentID = detailID / 1000
-	star = (detailID % 1000) / 100
-	weaponStar = (detailID % 100) / 10
-	isAssist = detailID%10 == 1
-	return
 }
 
 // IsStriker checks if studentID is a striker (1xxxx)
@@ -50,8 +41,7 @@ func collectAllStudentIDs(partyDataMap map[string]*types.BATormentPartyData) map
 					if member == 0 {
 						continue
 					}
-					studentID := member / 1000
-					result[studentID] = true
+					result[logic.GetStudentID(member)] = true
 				}
 			}
 		}

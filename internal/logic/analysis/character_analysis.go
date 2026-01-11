@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
 )
 
@@ -145,7 +146,7 @@ func analyzeCharacterInRaid(studentID int, partyData *types.BATormentPartyData) 
 					continue
 				}
 
-				memberStudentID, star, weaponStar, isAssist := ParseStudentDetailID(member)
+				memberStudentID, star, weaponStar, isAssist := logic.ParseStudentDetailID(member)
 
 				// Collect squad members for synergy
 				squadMembers = append(squadMembers, memberStudentID)

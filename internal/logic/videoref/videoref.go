@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"ba-torment-data-process/internal/db/postgres"
+	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
 )
 
@@ -146,8 +147,8 @@ func isPartyMatch(partyA [6]int, partyB [6]int) bool {
 
 // isHoshinoMusoException checks if the difference is due to Hoshino Muso form change
 func isHoshinoMusoException(a, b int) bool {
-	studentA := a / 1000
-	studentB := b / 1000
+	studentA := logic.GetStudentID(a)
+	studentB := logic.GetStudentID(b)
 
 	return (studentA == hoshinoMusoCodeA && studentB == hoshinoMusoCodeB) ||
 		(studentA == hoshinoMusoCodeB && studentB == hoshinoMusoCodeA)

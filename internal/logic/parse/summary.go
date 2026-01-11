@@ -62,15 +62,12 @@ func processLevelData(data []types.BATormentPartyDetail, level string, lunaticCo
 			members := entry.PartyData[i]
 			var charIDs []string
 			for _, member := range members {
-
-				charID := member / 1000
-
+				charID := logic.GetStudentID(member)
 				if charID == 0 {
 					continue
 				}
 
 				logic.UpdateSummaryFilters(filters, assistFilters, member)
-
 				charIDs = append(charIDs, strconv.Itoa(charID))
 			}
 			sort.Strings(charIDs)

@@ -323,7 +323,7 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 		weaponStar := weaponValue % 10
 
 		// Create student detail ID (8 digits)
-		studentDetailID := logic.GetStudentDetailIDInt(sid, star, weaponStar, assist)
+		studentDetailID := logic.ComposeStudentDetailID(sid, star, weaponStar, assist)
 
 		// slot 0-3: strikers (positions 0-3)
 		// slot 4: specials (position 4-5, append sequentially)
@@ -418,7 +418,7 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []type
 					continue
 				}
 				// Extract studentID (first 5 digits)
-				studentID := member / 1000
+				studentID := logic.GetStudentID(member)
 				if isLunatic {
 					lunaticCharCount[studentID]++
 				} else {
@@ -645,7 +645,7 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 					continue
 				}
 				// Include both own characters and assists
-				usedChars[member/1000] = true
+				usedChars[logic.GetStudentID(member)] = true
 			}
 		}
 

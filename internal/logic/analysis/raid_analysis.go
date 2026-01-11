@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
 )
 
@@ -44,7 +45,7 @@ func AnalyzeRaid(raidID string, partyData *types.BATormentPartyData) types.RaidA
 					continue
 				}
 
-				studentID, _, _, isAssist := ParseStudentDetailID(member)
+				studentID, _, _, isAssist := logic.ParseStudentDetailID(member)
 
 				if IsStriker(studentID) {
 					strikerCount[studentID]++
