@@ -2,30 +2,11 @@ package analysis
 
 import (
 	"sort"
-	"strings"
 
 	"ba-torment-data-process/internal/constants"
-	"ba-torment-data-process/internal/logic"
+	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
 )
-
-// ExtractGroupID extracts group ID from content_id (e.g., "3S26-1" -> "3S26")
-func ExtractGroupID(contentID string) string {
-	if idx := strings.Index(contentID, "-"); idx != -1 {
-		return contentID[:idx]
-	}
-	return contentID
-}
-
-// IsStriker checks if studentID is a striker (1xxxx)
-func IsStriker(studentID int) bool {
-	return studentID/10000 == 1
-}
-
-// IsSpecial checks if studentID is a special (2xxxx)
-func IsSpecial(studentID int) bool {
-	return studentID/10000 == 2
-}
 
 // collectAllStudentIDs collects all unique studentIDs from party data
 func collectAllStudentIDs(partyDataMap map[string]*types.BATormentPartyData) map[int]bool {
@@ -41,7 +22,7 @@ func collectAllStudentIDs(partyDataMap map[string]*types.BATormentPartyData) map
 					if member == 0 {
 						continue
 					}
-					result[logic.GetStudentID(member)] = true
+					result[id.GetStudentID(member)] = true
 				}
 			}
 		}

@@ -9,7 +9,7 @@ import (
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/logic/analysis"
-	logic_upload "ba-torment-data-process/internal/logic/upload"
+	"ba-torment-data-process/internal/logic/storage"
 
 	"github.com/joho/godotenv"
 )
@@ -58,7 +58,7 @@ func main() {
 	result := analysis.RunTotalAnalysis(partyDataMap, contentIDs)
 
 	// Upload result
-	err = logic_upload.MarshalAndUpload(
+	err = storage.MarshalAndUpload(
 		result,
 		"batorment/v3",
 		"total-analysis.json",

@@ -12,8 +12,7 @@ import (
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
-	logic_download "ba-torment-data-process/internal/logic/download"
-	logic_upload "ba-torment-data-process/internal/logic/upload"
+	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
 )
 
@@ -30,7 +29,7 @@ type JapaneseStudentInfo struct {
 // Reads /data/<lang>/localization.min.json file and returns BuffName map
 func loadLocalization(lang string) map[string]string {
 	url := fmt.Sprintf("%s/data/%s/localization.min.json", constants.SchaleDBURL, lang)
-	byteValue := logic_download.GetDataFromURL(url)
+	byteValue := storage.GetDataFromURL(url)
 
 	var locData LocalizationRawData
 	err := json.Unmarshal(byteValue, &locData)
@@ -44,7 +43,7 @@ func loadLocalization(lang string) map[string]string {
 // Reads /data/jp/students.json file and returns Japanese student info map.
 // This is used to get student names in Japanese.
 func loadJapaneseStudentInfo() map[string]JapaneseStudentInfo {
-	byteValue := logic_download.GetDataFromURL(constants.SchaleDBURL + "/data/jp/students.json")
+	byteValue := storage.GetDataFromURL(constants.SchaleDBURL + "/data/jp/students.json")
 
 	var studentData map[string]JapaneseStudentInfo
 	err := json.Unmarshal(byteValue, &studentData)
@@ -147,7 +146,7 @@ func processValueField(effectMap map[string]any) {
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
 
-	byteValue := logic_download.GetDataFromURL(constants.SchaleDBURL + "/data/kr/students.json")
+	byteValue := storage.GetDataFromURL(constants.SchaleDBURL + "/data/kr/students.json")
 
 	var rawData map[string]any
 	err := json.Unmarshal(byteValue, &rawData)
@@ -263,7 +262,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		log.Printf("Student %s (%s) processed", studentID, completeData.Name)
 	}
 
-	if err := logic_upload.MarshalAndUpload(studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
+	if err := storage.MarshalAndUpload(studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
 		log.Printf("Failed to upload student map: %v", err)
 		return nil, err
 	}
@@ -293,7 +292,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		}
 	}
 
-	if err := logic_upload.MarshalAndUpload(studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
+	if err := storage.MarshalAndUpload(studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
 		log.Printf("Failed to upload student search map: %v", err)
 		return nil, err
 	}
@@ -304,11 +303,11 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 // Uploads the character image from SchaleDB via File Manager API.
 func uploadCharacterImage(id int, dryRun bool) error {
 
-	imgBytes := logic_download.GetDataFromURL(constants.SchaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
+	imgBytes := storage.GetDataFromURL(constants.SchaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
 
 	path := "batorment/character"
 
-	err := logic_upload.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
+	err := storage.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
 	if err != nil {
 		return fmt.Errorf("failed to upload image to S3: %v", err)
 	}

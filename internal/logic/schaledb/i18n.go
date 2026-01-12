@@ -7,7 +7,7 @@ import (
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
-	logic_download "ba-torment-data-process/internal/logic/download"
+	"ba-torment-data-process/internal/logic/storage"
 )
 
 type localizationRaw struct {
@@ -17,7 +17,7 @@ type localizationRaw struct {
 
 func loadLocalizationFull(lang string) *localizationRaw {
 	url := constants.SchaleDBURL + "data/" + lang + "/localization.min.json"
-	byteValue := logic_download.GetDataFromURL(url)
+	byteValue := storage.GetDataFromURL(url)
 
 	var data localizationRaw
 	if err := json.Unmarshal(byteValue, &data); err != nil {

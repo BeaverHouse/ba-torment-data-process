@@ -3,7 +3,7 @@ package schaledb
 import (
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
-	logic_download "ba-torment-data-process/internal/logic/download"
+	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
 	"context"
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 // Reads /data/<lang>/items.json file
 func loadItems(lang string) map[string]types.FavorItem {
 	url := fmt.Sprintf("%s/data/%s/items.json", constants.SchaleDBURL, lang)
-	byteValue := logic_download.GetDataFromURL(url)
+	byteValue := storage.GetDataFromURL(url)
 
 	var items map[string]types.FavorItem
 	err := json.Unmarshal(byteValue, &items)

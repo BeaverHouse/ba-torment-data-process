@@ -1,16 +1,55 @@
-package filter
+package party
 
 import (
 	"context"
 	"log"
+	"strconv"
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
-	"ba-torment-data-process/internal/logic"
+	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
 )
 
-// createFilterFromPartyTeams creates a filter from a list of party teams for summary data
+// === Filter update helpers ===
+
+func updateFilter(filters map[string](map[string]int), studentDetailID int) {
+	studentIDString := strconv.Itoa(id.GetStudentID(studentDetailID))
+	starWeaponString := strconv.Itoa(id.GetStarWeapon(studentDetailID))
+
+	if _, exists := filters[studentIDString]; !exists {
+		filters[studentIDString] = make(map[string]int)
+	}
+
+	filters[studentIDString][starWeaponString]++
+}
+
+// updatePartyFilters updates assist filters if the student is an assist,
+// and updates normal filters if the student is not an assist.
+func updatePartyFilters(filters map[string](map[string]int), assistFilters map[string](map[string]int), studentDetailID int) {
+	isAssist := id.IsAssist(studentDetailID)
+
+	targetFilters := filters
+	if isAssist {
+		targetFilters = assistFilters
+	}
+
+	updateFilter(targetFilters, studentDetailID)
+}
+
+// updateSummaryFilters always updates normal filters,
+// and updates assist filters if the student is an assist.
+func updateSummaryFilters(filters map[string](map[string]int), assistFilters map[string](map[string]int), studentDetailID int) {
+	isAssist := id.IsAssist(studentDetailID)
+
+	updateFilter(filters, studentDetailID)
+	if isAssist {
+		updateFilter(assistFilters, studentDetailID)
+	}
+}
+
+// === Party Filters ===
+
 func createFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
 	filters := make(map[string](map[string]int))
 	assistFilters := make(map[string](map[string]int))
@@ -18,26 +57,7 @@ func createFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
 	for _, partyTeam := range partyTeams {
 		for _, studentDetailID := range partyTeam {
 			if studentDetailID != 0 {
-				logic.UpdateSummaryFilters(filters, assistFilters, studentDetailID)
-			}
-		}
-	}
-
-	return &types.BATormentFilter{
-		Filters:       filters,
-		AssistFilters: assistFilters,
-	}
-}
-
-// createVideoFilterFromPartyTeams creates a filter from a list of party teams for video data
-func createVideoFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
-	filters := make(map[string](map[string]int))
-	assistFilters := make(map[string](map[string]int))
-
-	for _, partyTeam := range partyTeams {
-		for _, studentDetailID := range partyTeam {
-			if studentDetailID != 0 {
-				logic.UpdatePartyFilters(filters, assistFilters, studentDetailID)
+				updateSummaryFilters(filters, assistFilters, studentDetailID)
 			}
 		}
 	}
@@ -51,7 +71,6 @@ func createVideoFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter
 func CreateLunaticFilter(partyData *types.BATormentPartyData) *types.BATormentFilter {
 	var partyTeams [][6]int
 
-	// Filter parties with score >= LunaticMinScore and rank <= PlatinumRankLimit
 	for _, party := range partyData.PartyDetail {
 		if party.Rank > constants.PlatinumRankLimit {
 			continue
@@ -69,7 +88,6 @@ func CreateNonLunaticFilter(partyData *types.BATormentPartyData) *types.BATormen
 
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
-	// Filter parties with score in range and rank <= PlatinumRankLimit
 	for _, party := range partyData.PartyDetail {
 		if party.Rank > constants.PlatinumRankLimit {
 			continue
@@ -88,16 +106,34 @@ func CreateNonLunaticFilter(partyData *types.BATormentPartyData) *types.BATormen
 	return createFilterFromPartyTeams(partyTeams)
 }
 
+// === Video Filter ===
+
+func createVideoFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter {
+	filters := make(map[string](map[string]int))
+	assistFilters := make(map[string](map[string]int))
+
+	for _, partyTeam := range partyTeams {
+		for _, studentDetailID := range partyTeam {
+			if studentDetailID != 0 {
+				updatePartyFilters(filters, assistFilters, studentDetailID)
+			}
+		}
+	}
+
+	return &types.BATormentFilter{
+		Filters:       filters,
+		AssistFilters: assistFilters,
+	}
+}
+
 // CreateVideoFilter creates a video filter from verified YouTube analysis data in the database
 func CreateVideoFilter(raidID string) *types.BATormentFilter {
-	// Connect to database
 	pool := postgres.InitFromEnv()
 	defer pool.Close()
 
 	ctx := context.Background()
 	queries := postgres.New(pool)
 
-	// Get verified YouTube analysis from database
 	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
 	if err != nil {
 		log.Printf("Failed to query YouTube analysis for %s: %v", raidID, err)
@@ -111,7 +147,6 @@ func CreateVideoFilter(raidID string) *types.BATormentFilter {
 
 	var partyTeams [][6]int
 
-	// Parse analysis results and extract party data
 	for _, row := range analysisRows {
 		partyTeams = append(partyTeams, row.AnalysisResult.PartyData...)
 	}

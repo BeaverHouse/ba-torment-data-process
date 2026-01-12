@@ -8,11 +8,8 @@ import (
 
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic"
-	logic_duckdb "ba-torment-data-process/internal/logic/duckdb"
-	"ba-torment-data-process/internal/logic/filter"
-	"ba-torment-data-process/internal/logic/parse"
-	logic_upload "ba-torment-data-process/internal/logic/upload"
-	"ba-torment-data-process/internal/logic/videoref"
+	"ba-torment-data-process/internal/logic/party"
+	"ba-torment-data-process/internal/logic/storage"
 
 	"github.com/joho/godotenv"
 )
@@ -61,7 +58,7 @@ func main() {
 
 		// Step 1: Parse DuckDB to create party data
 		log.Printf("[1/6] Parsing DuckDB for %s...", contentID)
-		partyData, filterResult, err := logic_duckdb.ParseDuckDB(contentID, contentInfo.StartDate.Time)
+		partyData, filterResult, err := party.ParseDuckDB(contentID, contentInfo.StartDate.Time)
 		if err != nil {
 			log.Printf("Skipping content %s: %v", contentID, err)
 			partyUpdated[contentID] = false
@@ -73,28 +70,26 @@ func main() {
 
 		// Step 2: Update video references (without S3 download)
 		log.Printf("[2/6] Updating video references for %s...", contentID)
-		updated, err := videoref.UpdateVideoRefWithData(partyData, contentID)
+		updated, err := party.UpdateVideoRefWithData(partyData, contentID)
 		if err != nil {
 			log.Printf("Warning: Failed to update video refs for %s: %v", contentID, err)
-			// Continue even if video ref update fails
 		} else {
 			log.Printf("Updated %d video references for %s", updated, contentID)
 		}
 
 		// Step 3: Upload party data (with video refs if updated)
 		log.Printf("[3/6] Uploading party data for %s...", contentID)
-		if err := logic_upload.MarshalAndUpload(partyData, "batorment/v3/party", fileName, *dryRun, ""); err != nil {
+		if err := storage.MarshalAndUpload(partyData, "batorment/v3/party", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload party data: %v", err)
 			continue
 		}
 
 		// Step 4: Create and upload video filter
 		log.Printf("[4/6] Creating and uploading video filter for %s...", contentID)
-		videoFilter := filter.CreateVideoFilter(contentID)
+		videoFilter := party.CreateVideoFilter(contentID)
 		if videoFilter != nil {
-			if err := logic_upload.MarshalAndUpload(videoFilter, "batorment/v3/video-filter", fileName, *dryRun, ""); err != nil {
+			if err := storage.MarshalAndUpload(videoFilter, "batorment/v3/video-filter", fileName, *dryRun, ""); err != nil {
 				log.Printf("Warning: Failed to upload video filter: %v", err)
-				// Continue even if video filter upload fails
 			}
 		} else {
 			log.Printf("Warning: No video filter created for %s", contentID)
@@ -104,44 +99,43 @@ func main() {
 		log.Printf("[5/6] Uploading additional filters for %s...", contentID)
 
 		// Upload basic filter
-		if err := logic_upload.MarshalAndUpload(filterResult, "batorment/v3/filter", fileName, *dryRun, ""); err != nil {
+		if err := storage.MarshalAndUpload(filterResult, "batorment/v3/filter", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload filter: %v", err)
 			continue
 		}
 
 		// Create and upload lunatic filter
-		lunaticFilter := filter.CreateLunaticFilter(partyData)
-		if err := logic_upload.MarshalAndUpload(lunaticFilter, "batorment/v3/lunatic-filter", fileName, *dryRun, ""); err != nil {
+		lunaticFilter := party.CreateLunaticFilter(partyData)
+		if err := storage.MarshalAndUpload(lunaticFilter, "batorment/v3/lunatic-filter", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload lunatic filter: %v", err)
 		}
 
 		// Create and upload non-lunatic filter
-		nonLunaticFilter := filter.CreateNonLunaticFilter(partyData)
-		if err := logic_upload.MarshalAndUpload(nonLunaticFilter, "batorment/v3/nonlunatic-filter", fileName, *dryRun, ""); err != nil {
+		nonLunaticFilter := party.CreateNonLunaticFilter(partyData)
+		if err := storage.MarshalAndUpload(nonLunaticFilter, "batorment/v3/nonlunatic-filter", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload non-lunatic filter: %v", err)
 		}
 
 		// Step 6: Create and upload summary data
 		log.Printf("[6/6] Processing and uploading summary data for %s...", contentID)
-		summaryData, err := parse.ProcessPartyDataToSummaryData(partyData)
+		summaryData, err := party.ProcessPartyDataToSummaryData(partyData)
 		if err != nil {
 			log.Printf("Failed to process summary data: %v", err)
 			continue
 		}
 
 		// Add platinum cuts to summary data
-		platinumCuts, err := logic_duckdb.GetPlatinumCuts(contentID, contentInfo.StartDate.Time)
+		platinumCuts, err := party.GetPlatinumCuts(contentID, contentInfo.StartDate.Time)
 		if err != nil {
 			log.Printf("Warning: Failed to get platinum cuts for %s: %v", contentID, err)
-			// Continue even if platinum cuts fail - it's not critical
 		} else {
 			summaryData.PlatinumCuts = platinumCuts
 			log.Printf("Added %d platinum cuts for %s", len(platinumCuts), contentID)
 		}
 
 		// Add part platinum cuts for grand assault (individual part cuts from partyData)
-		if logic_duckdb.IsGrandAssault(contentID) {
-			partPlatinumCuts := logic_duckdb.GetPartPlatinumCutsFromPartyData(partyData)
+		if party.IsGrandAssault(contentID) {
+			partPlatinumCuts := party.GetPartPlatinumCutsFromPartyData(partyData)
 			if len(partPlatinumCuts) > 0 {
 				summaryData.PartPlatinumCuts = partPlatinumCuts
 				log.Printf("Added %d part platinum cuts for %s", len(partPlatinumCuts), contentID)
@@ -149,19 +143,19 @@ func main() {
 		}
 
 		// Add essential characters (70%+ usage in platinum ranks)
-		essentialTorment, essentialLunatic := logic_duckdb.GetEssentialCharacters(partyData)
+		essentialTorment, essentialLunatic := party.GetEssentialCharacters(partyData)
 		summaryData.Torment.EssentialCharacters = essentialTorment
 		summaryData.Lunatic.EssentialCharacters = essentialLunatic
 		log.Printf("Essential characters for %s: Torment=%d, Lunatic=%d", contentID, len(essentialTorment), len(essentialLunatic))
 
 		// Add high impact characters (biggest score gap when missing)
-		highImpactTorment, highImpactLunatic := logic_duckdb.GetHighImpactCharacters(partyData)
+		highImpactTorment, highImpactLunatic := party.GetHighImpactCharacters(partyData)
 		summaryData.Torment.HighImpactCharacters = highImpactTorment
 		summaryData.Lunatic.HighImpactCharacters = highImpactLunatic
 		log.Printf("High impact characters for %s: Torment=%d, Lunatic=%d", contentID, len(highImpactTorment), len(highImpactLunatic))
 
 		// Add min UE users (users who cleared with minimum unique equipment)
-		minUETorment, minUELunatic := logic_duckdb.GetMinUEUsers(partyData)
+		minUETorment, minUELunatic := party.GetMinUEUsers(partyData)
 		summaryData.Torment.MinUEUser = minUETorment
 		summaryData.Lunatic.MinUEUser = minUELunatic
 		if minUETorment != nil {
@@ -172,7 +166,7 @@ func main() {
 		}
 
 		// Add max party users (users who cleared with maximum party count)
-		maxPartyTorment, maxPartyLunatic := logic_duckdb.GetMaxPartyUsers(partyData)
+		maxPartyTorment, maxPartyLunatic := party.GetMaxPartyUsers(partyData)
 		summaryData.Torment.MaxPartyUser = maxPartyTorment
 		summaryData.Lunatic.MaxPartyUser = maxPartyLunatic
 		if maxPartyTorment != nil {
@@ -182,12 +176,12 @@ func main() {
 			log.Printf("Max party user (Lunatic) for %s: rank %d, %d parties", contentID, maxPartyLunatic.Rank, len(maxPartyLunatic.PartyData))
 		}
 
-		if err := logic_upload.MarshalAndUpload(summaryData, "batorment/v3/summary", fileName, *dryRun, ""); err != nil {
+		if err := storage.MarshalAndUpload(summaryData, "batorment/v3/summary", fileName, *dryRun, ""); err != nil {
 			log.Printf("Failed to upload summary data: %v", err)
 			continue
 		}
 
-		log.Printf("✓ Successfully processed content: %s\n", contentID)
+		log.Printf("Successfully processed content: %s\n", contentID)
 	}
 
 	// Generate raids.json
@@ -202,7 +196,7 @@ func main() {
 		})
 	}
 
-	if err := logic_upload.MarshalAndUpload(raidList, "batorment/v3", "raids.json", *dryRun, "Raids list uploaded"); err != nil {
+	if err := storage.MarshalAndUpload(raidList, "batorment/v3", "raids.json", *dryRun, "Raids list uploaded"); err != nil {
 		log.Printf("Failed to upload raids.json: %v", err)
 	}
 

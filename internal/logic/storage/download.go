@@ -1,4 +1,4 @@
-package logic_download
+package storage
 
 import (
 	"io"
@@ -7,9 +7,7 @@ import (
 	"time"
 )
 
-// Gets data from URL.
-//
-// If the URL is invalid or the data is empty, it returns an error.
+// GetDataFromURL gets data from URL.
 func GetDataFromURL(url string) []byte {
 	start := time.Now()
 	resp, err := http.Get(url)

@@ -1,10 +1,4 @@
-package logic
-
-import (
-	"log"
-	"strconv"
-	"strings"
-)
+package id
 
 // StudentDetailID format: {studentID(5)}{star(1)}{weaponStar(1)}{isAssist(1)}
 // Example: 10000310 = studentID=10000, star=3, weaponStar=1, isAssist=false
@@ -42,15 +36,12 @@ func IsAssist(detailID int) bool {
 	return detailID%10 == 1
 }
 
-// Splits the season string into season & category. (Ex. S16-1 >> S16, 1)
-func SplitSeasonString(season string) (string, int) {
-	parts := strings.Split(season, "-")
-	if len(parts) != 2 {
-		log.Fatalf("Invalid season string: %s", season)
-	}
-	category, err := strconv.Atoi(parts[1])
-	if err != nil {
-		log.Fatalf("Invalid season string: %s", season)
-	}
-	return strings.Replace(parts[0], "3S", "S", 1), category
+// IsStriker checks if studentID is a striker (1xxxx).
+func IsStriker(studentID int) bool {
+	return studentID/10000 == 1
+}
+
+// IsSpecial checks if studentID is a special (2xxxx).
+func IsSpecial(studentID int) bool {
+	return studentID/10000 == 2
 }

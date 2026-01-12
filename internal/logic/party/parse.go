@@ -1,4 +1,4 @@
-package logic_duckdb
+package party
 
 import (
 	"database/sql"
@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"ba-torment-data-process/internal/constants"
-	"ba-torment-data-process/internal/logic"
+	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
 
 	"github.com/andybalholm/brotli"
@@ -32,7 +32,6 @@ func downloadDuckDB(dateString string) error {
 
 	log.Printf("Downloading DuckDB from: %s", url)
 
-	// Create HTTP client that accepts Brotli encoding
 	client := &http.Client{
 		Timeout: 5 * time.Minute,
 	}
@@ -42,7 +41,6 @@ func downloadDuckDB(dateString string) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Accept Brotli encoding (CloudFront sends Brotli-compressed files)
 	req.Header.Set("Accept-Encoding", "br, gzip, deflate")
 	req.Header.Set("User-Agent", "ba-torment-data-process/1.0")
 
@@ -60,31 +58,27 @@ func downloadDuckDB(dateString string) error {
 	log.Printf("Response Content-Type: %s, Content-Length: %d, Content-Encoding: %s",
 		resp.Header.Get("Content-Type"), resp.ContentLength, contentEncoding)
 
-	// Create output file
 	out, err := os.Create(fileName)
 	if err != nil {
 		return fmt.Errorf("failed to create file %s: %w", fileName, err)
 	}
 	defer out.Close()
 
-	// Decompress if Brotli encoded
 	var reader io.Reader = resp.Body
 	if contentEncoding == "br" {
 		log.Printf("Decompressing Brotli-encoded file...")
 		reader = brotli.NewReader(resp.Body)
 	}
 
-	// Copy (and decompress) to file
 	written, err := io.Copy(out, reader)
 	if err != nil {
-		os.Remove(fileName) // Clean up incomplete file
+		os.Remove(fileName)
 		return fmt.Errorf("failed to write file %s: %w", fileName, err)
 	}
 
 	log.Printf("Downloaded and wrote %d bytes (%.2f MB) to %s", written, float64(written)/(1024*1024), fileName)
 
-	// Verify minimum file size (DuckDB files should be substantial)
-	if written < 10240 { // At least 10KB
+	if written < 10240 {
 		os.Remove(fileName)
 		return fmt.Errorf("downloaded file is too small (%d bytes), likely not a valid DuckDB file", written)
 	}
@@ -96,7 +90,6 @@ func ParseDuckDB(contentID string, startDate time.Time) (*types.BATormentPartyDa
 	dateString := startDate.Format("20060102")
 	dbFileName := fmt.Sprintf("%s.db", dateString)
 
-	// Check if DuckDB file exists, if not, try to download it
 	if _, err := os.Stat(dbFileName); os.IsNotExist(err) {
 		log.Printf("DuckDB file %s not found, attempting to download...", dbFileName)
 		if err := downloadDuckDB(dateString); err != nil {
@@ -112,7 +105,7 @@ func ParseDuckDB(contentID string, startDate time.Time) (*types.BATormentPartyDa
 	}
 	defer db.Close()
 
-	_, category := logic.SplitSeasonString(contentID)
+	_, category := id.SplitSeasonString(contentID)
 
 	armorType := constants.ArmorTypeMapping[category]
 
@@ -125,24 +118,20 @@ func ParseDuckDB(contentID string, startDate time.Time) (*types.BATormentPartyDa
 		return nil, nil, fmt.Errorf("no details found for armor type: %s", armorType)
 	}
 
-	// Apply fraud user cleanup for specific content
 	removeFraudUsers(contentID, partyData)
 
 	return partyData, filterResult, nil
 }
 
 // removeFraudUsers removes known fraudulent user data and adjusts ranks
-// S80-0 rank 13622: User with Mika (10059) star 5, UE1 (studentDetailID contains 10059510)
 func removeFraudUsers(contentID string, partyData *types.BATormentPartyData) {
 	if contentID != "S80-0" {
 		return
 	}
 
-	// Find the fraud user at rank 13622 with Mika star 5 UE1 (studentDetailID 10059510)
 	fraudIndex := -1
 	for i, party := range partyData.PartyDetail {
 		if party.Rank == 13622 {
-			// Check if this user has Mika star 5 UE1 (studentDetailID 10059510)
 			hasFraudChar := false
 			for _, members := range party.PartyData {
 				for _, member := range members {
@@ -167,10 +156,8 @@ func removeFraudUsers(contentID string, partyData *types.BATormentPartyData) {
 		return
 	}
 
-	// Remove the fraud entry
 	partyData.PartyDetail = append(partyData.PartyDetail[:fraudIndex], partyData.PartyDetail[fraudIndex+1:]...)
 
-	// Shift ranks for all entries after the removed one (13623+ becomes 13622+)
 	for i := fraudIndex; i < len(partyData.PartyDetail); i++ {
 		partyData.PartyDetail[i].Rank--
 	}
@@ -179,8 +166,7 @@ func removeFraudUsers(contentID string, partyData *types.BATormentPartyData) {
 }
 
 func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, *types.BATormentFilter, error) {
-	// Step 1: Get complete run IDs and scores
-	completeRunsSQL := GetCompleteRunIDAndScoreSQL(armorType)
+	completeRunsSQL := getCompleteRunIDAndScoreSQL(armorType)
 	rows, err := db.Query(completeRunsSQL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to query complete runs: %w", err)
@@ -201,7 +187,6 @@ func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, 
 		runs = append(runs, runData{completeRunID, score})
 	}
 
-	// Sort by score descending
 	sort.Slice(runs, func(i, j int) bool {
 		return runs[i].score > runs[j].score
 	})
@@ -214,24 +199,21 @@ func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, 
 	maxPartys := 0
 
 	for rank, run := range runs {
-		// Skip data with score 0
 		if run.score == 0 {
 			break
 		}
 
-		// Step 2: Get run IDs by complete run ID
 		partyData, err := getPartiesByCompleteRunID(db, armorType, run.completeRunID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get parties: %w", err)
 		}
 
-		// Update filters
 		for _, party := range partyData {
 			for _, member := range party {
 				if member == 0 {
 					continue
 				}
-				logic.UpdatePartyFilters(filters, assistFilters, member)
+				updatePartyFilters(filters, assistFilters, member)
 			}
 		}
 
@@ -265,7 +247,7 @@ func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, 
 }
 
 func getPartiesByCompleteRunID(db *sql.DB, armorType string, completeRunID int) ([][6]int, error) {
-	runIDsSQL := GetRunIDsByCompleteRunIDSQL(armorType, completeRunID)
+	runIDsSQL := getRunIDsByCompleteRunIDSQL(armorType, completeRunID)
 	rows, err := db.Query(runIDsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query run IDs: %w", err)
@@ -280,7 +262,6 @@ func getPartiesByCompleteRunID(db *sql.DB, armorType string, completeRunID int) 
 			return nil, fmt.Errorf("failed to scan run ID: %w", err)
 		}
 
-		// Step 3: Get party info by run ID
 		party, err := getPartyByRunID(db, armorType, runID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get party: %w", err)
@@ -293,14 +274,13 @@ func getPartiesByCompleteRunID(db *sql.DB, armorType string, completeRunID int) 
 }
 
 func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
-	partySQL := GetPartyInfoByRunIDSQL(armorType, runID)
+	partySQL := getPartyInfoByRunIDSQL(armorType, runID)
 	rows, err := db.Query(partySQL)
 	if err != nil {
 		return [6]int{}, fmt.Errorf("failed to query party info: %w", err)
 	}
 	defer rows.Close()
 
-	// Initialize party members array [4 strikers + 2 specials]
 	var partyMembers [6]int
 	specialIndex := 0
 
@@ -313,7 +293,6 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 			return [6]int{}, fmt.Errorf("failed to scan party info: %w", err)
 		}
 
-		// Map build to weapon star
 		weaponValue, exists := constants.WeaponStarMapping[build]
 		if !exists {
 			return [6]int{}, fmt.Errorf("unknown build value: %s", build)
@@ -322,15 +301,11 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 		star := weaponValue / 10
 		weaponStar := weaponValue % 10
 
-		// Create student detail ID (8 digits)
-		studentDetailID := logic.ComposeStudentDetailID(sid, star, weaponStar, assist)
+		studentDetailID := id.ComposeStudentDetailID(sid, star, weaponStar, assist)
 
-		// slot 0-3: strikers (positions 0-3)
-		// slot 4: specials (position 4-5, append sequentially)
 		if slot <= 3 {
 			partyMembers[slot] = studentDetailID
 		} else {
-			// Find first empty special slot
 			if specialIndex < 2 {
 				partyMembers[4+specialIndex] = studentDetailID
 				specialIndex++
@@ -341,15 +316,13 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 	return partyMembers, nil
 }
 
-// IsGrandAssault checks if the contentID represents an grand assault (대결전)
-// Grand assaults have contentID starting with "3S" (e.g., "3S3-1")
+// IsGrandAssault checks if the contentID represents a grand assault (대결전)
 func IsGrandAssault(contentID string) bool {
 	return strings.HasPrefix(contentID, "3S")
 }
 
-// getExistingPointColumns returns the list of *_point columns that exist in complete_runs table
 func getExistingPointColumns(db *sql.DB) ([]string, error) {
-	rows, err := db.Query(GetCompleteRunsColumnsSQL())
+	rows, err := db.Query(getCompleteRunsColumnsSQL())
 	if err != nil {
 		return nil, err
 	}
@@ -376,14 +349,11 @@ func getExistingPointColumns(db *sql.DB) ([]string, error) {
 }
 
 // GetEssentialCharacters returns characters used by 70%+ of users (excluding assists)
-// Results are sorted by usage ratio in descending order
-// Returns separate results for Torment and Lunatic difficulties
 func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []types.EssentialCharacter, lunatic []types.EssentialCharacter) {
 	if len(partyData.PartyDetail) == 0 {
 		return nil, nil
 	}
 
-	// Check if this is INSANE difficulty (top score < TormentMinScore)
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
 	tormentCharCount := make(map[int]int)
@@ -391,12 +361,10 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []type
 	var tormentUsers, lunaticUsers int
 
 	for _, party := range partyData.PartyDetail {
-		// Only count platinum ranks (top 20000)
 		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 
-		// Determine difficulty
 		isLunatic := party.Score >= constants.LunaticMinScore
 		isTorment := isInsane || party.Score >= constants.TormentMinScore
 
@@ -413,12 +381,10 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []type
 				if member == 0 {
 					continue
 				}
-				// Skip assists (last digit is 1)
 				if member%10 == 1 {
 					continue
 				}
-				// Extract studentID (first 5 digits)
-				studentID := logic.GetStudentID(member)
+				studentID := id.GetStudentID(member)
 				if isLunatic {
 					lunaticCharCount[studentID]++
 				} else {
@@ -428,7 +394,6 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []type
 		}
 	}
 
-	// Helper function to calculate essential characters
 	calcEssential := func(charCount map[int]int, totalUsers int) []types.EssentialCharacter {
 		if totalUsers == 0 {
 			return nil
@@ -468,14 +433,11 @@ func GetEssentialCharacters(partyData *types.BATormentPartyData) (torment []type
 }
 
 // GetMinUEUsers returns users who cleared with minimum unique equipment usage
-// Sorted by UE count ascending, then party count ascending
-// Returns separate results for Torment and Lunatic difficulties
 func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUser, lunatic *types.MinUEUser) {
 	if len(partyData.PartyDetail) == 0 {
 		return nil, nil
 	}
 
-	// Check if this is INSANE difficulty (top score < TormentMinScore)
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
 	type userUEData struct {
@@ -489,23 +451,19 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUse
 	var tormentUsers, lunaticUsers []userUEData
 
 	for _, party := range partyData.PartyDetail {
-		// Only consider platinum users
 		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 
-		// Count UE usage (excluding assists)
 		ueCount := 0
 		for _, members := range party.PartyData {
 			for _, member := range members {
 				if member == 0 {
 					continue
 				}
-				// Skip assists (last digit is 1)
 				if member%10 == 1 {
 					continue
 				}
-				// Check weapon star (7th digit): (member % 100) / 10
 				weaponStar := (member % 100) / 10
 				if weaponStar > 0 {
 					ueCount++
@@ -521,16 +479,13 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUse
 			partyData:  party.PartyData,
 		}
 
-		// Classify by difficulty
 		if party.Score >= constants.LunaticMinScore {
 			lunaticUsers = append(lunaticUsers, userData)
 		} else if isInsane || party.Score >= constants.TormentMinScore {
-			// INSANE: all users go to torment
 			tormentUsers = append(tormentUsers, userData)
 		}
 	}
 
-	// Sort function: UE count ascending, then party count ascending, then rank ascending
 	sortFunc := func(users []userUEData) {
 		sort.Slice(users, func(i, j int) bool {
 			if users[i].ueCount != users[j].ueCount {
@@ -567,26 +522,22 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUse
 }
 
 // GetMaxPartyUsers returns users who cleared with maximum party count
-// Returns separate results for Torment and Lunatic difficulties
 func GetMaxPartyUsers(partyData *types.BATormentPartyData) (torment *types.MaxPartyUser, lunatic *types.MaxPartyUser) {
 	if len(partyData.PartyDetail) == 0 {
 		return nil, nil
 	}
 
-	// Check if this is INSANE difficulty (top score < TormentMinScore)
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
 	var tormentMaxCount, lunaticMaxCount int
 
 	for _, party := range partyData.PartyDetail {
-		// Only consider platinum users
 		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
 
 		partyCount := len(party.PartyData)
 
-		// Classify by difficulty and track max
 		if party.Score >= constants.LunaticMinScore {
 			if partyCount > lunaticMaxCount {
 				lunaticMaxCount = partyCount
@@ -597,7 +548,6 @@ func GetMaxPartyUsers(partyData *types.BATormentPartyData) (torment *types.MaxPa
 				}
 			}
 		} else if isInsane || party.Score >= constants.TormentMinScore {
-			// INSANE: all users go to torment
 			if partyCount > tormentMaxCount {
 				tormentMaxCount = partyCount
 				torment = &types.MaxPartyUser{
@@ -613,19 +563,13 @@ func GetMaxPartyUsers(partyData *types.BATormentPartyData) (torment *types.MaxPa
 }
 
 // GetHighImpactCharacters returns top 3 characters with the biggest rank gap when missing
-// It finds characters used by top 100 players of each difficulty and calculates the gap between
-// best rank and the best rank achieved without that character
-// For 100% usage characters, it falls back to lower difficulty or uses -1 if unavailable
-// Returns separate results for Torment and Lunatic difficulties
 func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []types.HighImpactCharacter, lunatic []types.HighImpactCharacter) {
 	if len(partyData.PartyDetail) == 0 {
 		return nil, nil
 	}
 
-	// Check if this is INSANE difficulty (top score < TormentMinScore)
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
-	// Separate data by difficulty
 	type partyInfo struct {
 		rank      int
 		usedChars map[int]bool
@@ -644,8 +588,7 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 				if member == 0 {
 					continue
 				}
-				// Include both own characters and assists
-				usedChars[logic.GetStudentID(member)] = true
+				usedChars[id.GetStudentID(member)] = true
 			}
 		}
 
@@ -658,8 +601,6 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 		}
 	}
 
-	// Helper function to find best rank (lowest) without a character in given parties
-	// Returns 0 if no one cleared without the character
 	findBestRankWithout := func(parties []partyInfo, charID int) int {
 		bestRank := 0
 		for _, p := range parties {
@@ -672,8 +613,6 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 		return bestRank
 	}
 
-	// Helper function to calculate high impact characters for a difficulty
-	// fallbackParties is used when 100% usage (no one cleared without the character)
 	calcHighImpact := func(parties []partyInfo, fallbackParties []partyInfo, top100Limit int) []types.HighImpactCharacter {
 		if len(parties) == 0 {
 			return nil
@@ -681,7 +620,6 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 
 		topRank := parties[0].rank
 
-		// Collect characters used by top 100 of this difficulty
 		top100Chars := make(map[int]bool)
 		for i, p := range parties {
 			if i >= top100Limit {
@@ -692,7 +630,6 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 			}
 		}
 
-		// Calculate gaps
 		type charGap struct {
 			studentID       int
 			rankGap         int
@@ -703,23 +640,20 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 		for charID := range top100Chars {
 			withoutBestRank := findBestRankWithout(parties, charID)
 
-			// If 100% usage in this difficulty, try fallback (lower difficulty)
 			if withoutBestRank == 0 && len(fallbackParties) > 0 {
 				withoutBestRank = findBestRankWithout(fallbackParties, charID)
 			}
 
-			// Calculate gap (-1 if still no data)
 			var rankGap int
 			if withoutBestRank > 0 {
 				rankGap = withoutBestRank - topRank
 			} else {
-				rankGap = -1 // 100% usage, no comparison available
+				rankGap = -1
 			}
 
 			gaps = append(gaps, charGap{charID, rankGap, withoutBestRank})
 		}
 
-		// Sort: -1 (100% usage) first, then by gap descending
 		sort.Slice(gaps, func(i, j int) bool {
 			if gaps[i].rankGap == -1 && gaps[j].rankGap != -1 {
 				return true
@@ -742,21 +676,17 @@ func GetHighImpactCharacters(partyData *types.BATormentPartyData) (torment []typ
 		return result
 	}
 
-	// For torment, no fallback (it's the lowest difficulty)
 	torment = calcHighImpact(tormentParties, nil, 100)
-	// For lunatic, fallback to torment
 	lunatic = calcHighImpact(lunaticParties, tormentParties, 100)
 
 	return torment, lunatic
 }
 
-// GetPlatinumCuts retrieves score cutoffs at specific ranks (2000, 4000, ..., 20000)
-// For grand assault, it uses combined scores from all armor types
+// GetPlatinumCuts retrieves score cutoffs at specific ranks
 func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut, error) {
 	dateString := startDate.Format("20060102")
 	dbFileName := fmt.Sprintf("%s.db", dateString)
 
-	// Check if DuckDB file exists
 	if _, err := os.Stat(dbFileName); os.IsNotExist(err) {
 		log.Printf("DuckDB file %s not found for platinum cuts", dbFileName)
 		return nil, fmt.Errorf("duckdb file not available: %w", err)
@@ -768,12 +698,10 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 	}
 	defer db.Close()
 
-	// Target ranks: 100, 200, 500, 1000, 2000, 4000, 6000, ..., 20000
 	ranks := []int{100, 200, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
 
 	var querySQL string
 	if IsGrandAssault(contentID) {
-		// For grand assault, first check which point columns exist
 		existingColumns, err := getExistingPointColumns(db)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get existing columns: %w", err)
@@ -781,9 +709,9 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 		if len(existingColumns) == 0 {
 			return nil, fmt.Errorf("no point columns found for elimination raid")
 		}
-		querySQL = GetPartialPlatinumCutSQL(ranks, existingColumns)
+		querySQL = getPartialPlatinumCutSQL(ranks, existingColumns)
 	} else {
-		querySQL = GetPlatinumCutSQL(ranks)
+		querySQL = getPlatinumCutSQL(ranks)
 	}
 
 	rows, err := db.Query(querySQL)
@@ -811,14 +739,12 @@ func GetPlatinumCuts(contentID string, startDate time.Time) ([]types.PlatinumCut
 	return cuts, nil
 }
 
-// GetPartPlatinumCutsFromPartyData extracts platinum cuts from partyData for grand assault (대결전)
-// This uses the partyData's rank order directly instead of querying DuckDB
+// GetPartPlatinumCutsFromPartyData extracts platinum cuts from partyData for grand assault
 func GetPartPlatinumCutsFromPartyData(partyData *types.BATormentPartyData) []types.PlatinumCut {
 	if partyData == nil || len(partyData.PartyDetail) == 0 {
 		return nil
 	}
 
-	// Target ranks: 100, 200, 500, 1000, 2000, 4000, 6000, ..., 20000
 	targetRanks := []int{100, 200, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000}
 
 	var cuts []types.PlatinumCut
@@ -835,4 +761,97 @@ func GetPartPlatinumCutsFromPartyData(partyData *types.BATormentPartyData) []typ
 	}
 
 	return cuts
+}
+
+// === SQL helpers ===
+
+func getCompleteRunIDAndScoreSQL(armorType string) string {
+	columnName := "point"
+	if armorType != "" {
+		columnName = armorType + "_point"
+	}
+	return fmt.Sprintf(`
+SELECT crunid, cr.%s
+FROM complete_runs cr
+ORDER BY cr.%s DESC
+`, columnName, columnName)
+}
+
+func getRunIDsByCompleteRunIDSQL(armorType string, completeRunID int) string {
+	tableName := "runs"
+	if armorType != "" {
+		tableName = "runs_" + armorType
+	}
+	return fmt.Sprintf(`
+SELECT r.runid
+FROM %s r
+WHERE r.crunid = %d
+`, tableName, completeRunID)
+}
+
+func getPartyInfoByRunIDSQL(armorType string, runID int) string {
+	tableName := "students"
+	if armorType != "" {
+		tableName = "students_" + armorType
+	}
+	return fmt.Sprintf(`
+SELECT sid, build, level, slot, assist
+FROM %s
+WHERE runid = %d
+`, tableName, runID)
+}
+
+func getPlatinumCutSQL(ranks []int) string {
+	return fmt.Sprintf(`
+WITH ranked AS (
+	SELECT point, ROW_NUMBER() OVER (ORDER BY point DESC) as rank
+	FROM complete_runs
+	WHERE point > 0
+)
+SELECT rank, point
+FROM ranked
+WHERE rank IN (%s)
+ORDER BY rank
+`, intSliceToSQL(ranks))
+}
+
+func getPartialPlatinumCutSQL(ranks []int, existingColumns []string) string {
+	if len(existingColumns) == 0 {
+		return ""
+	}
+
+	sumParts := make([]string, len(existingColumns))
+	for i, col := range existingColumns {
+		sumParts[i] = fmt.Sprintf("COALESCE(%s, 0)", col)
+	}
+	sumExpr := strings.Join(sumParts, " + ")
+
+	return fmt.Sprintf(`
+WITH ranked AS (
+	SELECT
+		%s as total_point,
+		ROW_NUMBER() OVER (ORDER BY %s DESC) as rank
+	FROM complete_runs
+	WHERE %s > 0
+)
+SELECT rank, total_point
+FROM ranked
+WHERE rank IN (%s)
+ORDER BY rank
+`, sumExpr, sumExpr, sumExpr, intSliceToSQL(ranks))
+}
+
+func getCompleteRunsColumnsSQL() string {
+	return `SELECT column_name FROM information_schema.columns WHERE table_name = 'complete_runs'`
+}
+
+func intSliceToSQL(nums []int) string {
+	if len(nums) == 0 {
+		return "0"
+	}
+	result := fmt.Sprintf("%d", nums[0])
+	for i := 1; i < len(nums); i++ {
+		result += fmt.Sprintf(", %d", nums[i])
+	}
+	return result
 }
