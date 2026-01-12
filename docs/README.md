@@ -1,22 +1,36 @@
 # Documentation
 
-## Commands
+## What is this repo?
 
-See [Commands documentation](./commands.md) for available commands and usage guide.
+This repo is for processing BA Torment data from various external sources.
 
-## Deployment
+1. Download data from external sources.
+   - Student, Item, and specific static data from [Schale DB](https://schaledb.com/).
+   - Party data from [Plana Stats](https://www.plana-stats.com/).
+     - The raw form of party data is DuckDB.
+   - Self-implemented Youtube video analysis pipeline by Gemini.
+2. Process the data and store it in database.
+   - Party data with compressed, refined form.
+   - Filter data from party data, with various conditions.
+   - Summary data of individual assaults.
+   - Student mapping JSON (with search keywords too)
+   - Total analysis, by assaults or by students.
 
-See [Docker deployment guide](./docker.md) for containerized deployment instructions.
+Most of the processed data is uploaded to Supabase Storage, but some data is stored in Supabase Database.
 
 ## Data structure
 
-1. [Arona AI data](./data-arona-ai.md)
+1. [DuckDB data](./data-duckdb.md)
 2. BA Torment data
    - [Party data](./data-batorment-party.md)
    - [Filter data](./data-batorment-filter.md)
    - [Summary data](./data-batorment-summary.md)
-3. [(Deprecated) Google API data](./data-google-api.md)
-   - [Sample](./sample_party_data.csv)
+   - Total analysis: WIP
+   - Student mapping JSON: WIP
+
+## Deployment
+
+See [Docker deployment guide](./docker.md) for containerized deployment instructions.
 
 ## Environment variables
 
