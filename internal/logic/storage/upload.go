@@ -19,7 +19,14 @@ var (
 
 // MarshalAndUpload marshals data to JSON and uploads it.
 func MarshalAndUpload(data any, path, fileName string, dryRun bool, successMsg string) error {
-	dataBytes, err := json.Marshal(data)
+	var dataBytes []byte
+	var err error
+
+	if dryRun {
+		dataBytes, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		dataBytes, err = json.Marshal(data)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to marshal data: %w", err)
 	}
