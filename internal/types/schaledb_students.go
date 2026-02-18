@@ -79,9 +79,23 @@ type StudentSkills struct {
 
 // Individual skill
 type StudentSkill struct {
-	Cost    []int         `json:"Cost,omitempty"`
-	Desc    string        `json:"Desc"`
-	Effects []SkillEffect `json:"Effects"`
+	Cost        []int          `json:"Cost,omitempty"`
+	Desc        string         `json:"Desc"`
+	Effects     []SkillEffect  `json:"Effects"`
+	ExtraSkills []ExtraSkill   `json:"ExtraSkills,omitempty"`
+}
+
+// Extra skill for selectable EX skills
+type ExtraSkill struct {
+	Id       string        `json:"Id"`
+	Name     string        `json:"Name"`
+	Desc     string        `json:"Desc"`
+	Cost     []int         `json:"Cost,omitempty"`
+	Duration int           `json:"Duration,omitempty"`
+	Range    int           `json:"Range,omitempty"`
+	Icon     string        `json:"Icon,omitempty"`
+	Effects  []SkillEffect `json:"Effects"`
+	Radius   []any         `json:"Radius,omitempty"`
 }
 
 // Skill effect
@@ -107,7 +121,7 @@ type SkillEffect struct {
 type SkillRestriction struct {
 	Property string `json:"Property"`
 	Operand  string `json:"Operand"`
-	Value    string `json:"Value"`
+	Value    any    `json:"Value"` // Can be string, number, or array
 }
 
 // HP-based damage modifier

@@ -143,6 +143,53 @@ func processValueField(effectMap map[string]any) {
 	}
 }
 
+// processEffectsSlice processes Effects array in a skill map
+func processEffectsSlice(skillMap map[string]any, fieldName string) {
+	if effects, ok := skillMap[fieldName]; ok {
+		if effectsSlice, ok := effects.([]any); ok {
+			for _, effect := range effectsSlice {
+				if effectMap, ok := effect.(map[string]any); ok {
+					// Convert Target string to []string if needed
+					processEffectField(effectMap, "Target", convertStringToStringSlice)
+					// Process Value field
+					processValueField(effectMap)
+				}
+			}
+		}
+	}
+}
+
+// processSkillDesc processes Desc and Parameters in a skill map
+func processSkillDesc(skillMap map[string]any, buffNames map[string]string) {
+	if desc, descExists := skillMap["Desc"]; descExists {
+		if parameters, paramExists := skillMap["Parameters"]; paramExists {
+			if descStr, ok := desc.(string); ok {
+				// Handle parameters as []any
+				if paramSlice, ok := parameters.([]any); ok {
+					// Replace <?1>, <?2>, etc. with last values from Parameters
+					for i, param := range paramSlice {
+						if innerSlice, ok := param.([]any); ok && len(innerSlice) > 0 {
+							// Get the last value from the inner slice
+							lastValue := innerSlice[len(innerSlice)-1]
+							if lastValueStr, ok := lastValue.(string); ok {
+								// Handle both regular and unicode encoded placeholders
+								placeholder1 := fmt.Sprintf("<?%d>", i+1)
+								placeholder2 := fmt.Sprintf("\\u003c?%d\\u003e", i+1)
+								descStr = strings.ReplaceAll(descStr, placeholder1, lastValueStr)
+								descStr = strings.ReplaceAll(descStr, placeholder2, lastValueStr)
+							}
+						}
+					}
+
+					// Replace buff/debuff tags
+					descStr = replaceBuffTags(descStr, buffNames)
+					skillMap["Desc"] = descStr + " (Skill Lv.Max)"
+				}
+			}
+		}
+	}
+}
+
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
 
@@ -173,43 +220,20 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 				for _, skill := range skillsMap {
 					if skillMap, ok := skill.(map[string]any); ok {
 						// Process Effects
-						if effects, ok := skillMap["Effects"]; ok {
-							if effectsSlice, ok := effects.([]any); ok {
-								for _, effect := range effectsSlice {
-									if effectMap, ok := effect.(map[string]any); ok {
-										// Convert Target string to []string if needed
-										processEffectField(effectMap, "Target", convertStringToStringSlice)
-										// Process Value field
-										processValueField(effectMap)
-									}
-								}
-							}
-						}
+						processEffectsSlice(skillMap, "Effects")
 
 						// Process Desc and Parameters
-						if desc, descExists := skillMap["Desc"]; descExists {
-							if parameters, paramExists := skillMap["Parameters"]; paramExists {
-								if descStr, ok := desc.(string); ok {
-									// Handle parameters as []any
-									if paramSlice, ok := parameters.([]any); ok {
-										// Replace <?1>, <?2>, etc. with last values from Parameters
-										for i, param := range paramSlice {
-											if innerSlice, ok := param.([]any); ok && len(innerSlice) > 0 {
-												// Get the last value from the inner slice
-												lastValue := innerSlice[len(innerSlice)-1]
-												if lastValueStr, ok := lastValue.(string); ok {
-													// Handle both regular and unicode encoded placeholders
-													placeholder1 := fmt.Sprintf("<?%d>", i+1)
-													placeholder2 := fmt.Sprintf("\\u003c?%d\\u003e", i+1)
-													descStr = strings.ReplaceAll(descStr, placeholder1, lastValueStr)
-													descStr = strings.ReplaceAll(descStr, placeholder2, lastValueStr)
-												}
-											}
-										}
+						processSkillDesc(skillMap, buffNames)
 
-										// Replace buff/debuff tags
-										descStr = replaceBuffTags(descStr, buffNames)
-										skillMap["Desc"] = descStr + " (Skill Lv.Max)"
+						// Process ExtraSkills (for selectable EX skills)
+						if extraSkills, ok := skillMap["ExtraSkills"]; ok {
+							if extraSkillsSlice, ok := extraSkills.([]any); ok {
+								for _, extraSkill := range extraSkillsSlice {
+									if extraSkillMap, ok := extraSkill.(map[string]any); ok {
+										// Process Effects in ExtraSkill
+										processEffectsSlice(extraSkillMap, "Effects")
+										// Process Desc and Parameters in ExtraSkill
+										processSkillDesc(extraSkillMap, buffNames)
 									}
 								}
 							}
