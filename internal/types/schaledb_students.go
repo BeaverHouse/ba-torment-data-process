@@ -47,9 +47,11 @@ type StudentData struct {
 	IndoorBattleAdaptation  int `json:"IndoorBattleAdaptation"`
 
 	// Equipment & Favor
-	Equipment []string `json:"Equipment"`
-	StarGrade int      `json:"StarGrade"`
-	IsLimited []int    `json:"IsLimited"`
+	Equipment    []string `json:"Equipment"`
+	StarGrade    int      `json:"StarGrade"`
+	IsLimited    []int    `json:"IsLimited"`    // 0:통상, 1:한정, 2:배포, 3:페스
+	IsReleased   []bool   `json:"IsReleased"`   // [JP, Global, CN] 서버별 출시 여부
+	DefaultOrder int      `json:"DefaultOrder"` // 출시 순서 (높을수록 신캐)
 
 	// Favor System
 	FavorStatType       []string `json:"FavorStatType"`
