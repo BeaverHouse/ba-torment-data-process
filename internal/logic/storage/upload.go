@@ -55,10 +55,10 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 
 	part, err := writer.CreateFormFile("file", fileName)
 	if err != nil {
-		log.Fatalf("Failed to create form file: %v", err)
+		panic(fmt.Sprintf("Failed to create form file: %v", err))
 	}
 	if _, err := io.Copy(part, bytes.NewReader(data)); err != nil {
-		log.Fatalf("Failed to copy file data: %v", err)
+		panic(fmt.Sprintf("Failed to copy file data: %v", err))
 	}
 	writer.WriteField("upload_path", path)
 	writer.Close()
@@ -69,7 +69,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		body,
 	)
 	if err != nil {
-		log.Fatalf("API request failed: %v", err)
+		panic(fmt.Sprintf("API request failed: %v", err))
 	}
 
 	req.Header.Set("X-Access-Token", os.Getenv("BA_ANALYZER_SERVICE_TOKEN"))
@@ -78,13 +78,13 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("API request failed: %v", err)
+		panic(fmt.Sprintf("API request failed: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Fatalf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body))
+		panic(fmt.Sprintf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body)))
 	}
 
 	log.Println("File uploaded successfully: ", fileName)

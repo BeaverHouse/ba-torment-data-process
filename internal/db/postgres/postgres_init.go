@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"ba-torment-data-process/internal/logic"
 	"ba-torment-data-process/internal/types"
@@ -25,7 +24,7 @@ func InitFromEnv() *pgxpool.Pool {
 
 	pool, err := NewPool(postgresConfig)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		panic(fmt.Sprintf("Failed to connect to database: %v", err))
 	}
 
 	return pool

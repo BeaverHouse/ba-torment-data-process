@@ -17,7 +17,7 @@ import (
 func main() {
 	if logic.IsLocalEnv() {
 		if err := godotenv.Load(); err != nil {
-			log.Fatalf("Failed to load .env file: %v", err)
+			panic(fmt.Sprintf("Failed to load .env file: %v", err))
 		}
 	}
 
@@ -33,7 +33,7 @@ func main() {
 	// Get all content IDs sorted by start_date
 	contents, err := queries.ListContentIDsWithStartDate(context.Background())
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to list content IDs: %w", err))
+		panic(fmt.Errorf("failed to list content IDs: %w", err))
 	}
 
 	// Extract content IDs in order
@@ -50,7 +50,7 @@ func main() {
 	log.Printf("Successfully downloaded %d/%d party data", len(partyDataMap), len(contentIDs))
 
 	if len(partyDataMap) == 0 {
-		log.Fatal("No party data available for analysis")
+		panic("No party data available for analysis")
 	}
 
 	// Run analysis
@@ -66,7 +66,7 @@ func main() {
 		"Total analysis completed",
 	)
 	if err != nil {
-		log.Fatalf("Failed to upload analysis result: %v", err)
+		panic(fmt.Sprintf("Failed to upload analysis result: %v", err))
 	}
 
 	log.Println("Total analysis completed successfully!")

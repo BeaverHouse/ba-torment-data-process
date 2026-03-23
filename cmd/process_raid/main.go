@@ -25,7 +25,7 @@ type RaidListItem struct {
 func main() {
 	if logic.IsLocalEnv() {
 		if err := godotenv.Load(); err != nil {
-			log.Fatalf("Failed to load .env file: %v", err)
+			panic(fmt.Sprintf("Failed to load .env file: %v", err))
 		}
 	}
 
@@ -41,7 +41,7 @@ func main() {
 	// Get all contents for raid list
 	contents, err := queries.ListContentsForRaidList(context.Background())
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to list contents: %w", err))
+		panic(fmt.Errorf("failed to list contents: %w", err))
 	}
 
 	// Track party_updated status for each content
@@ -53,7 +53,7 @@ func main() {
 
 		contentInfo, err := queries.GetContentByID(context.Background(), contentID)
 		if err != nil {
-			log.Fatal(fmt.Errorf("failed to get content info: %w", err))
+			panic(fmt.Errorf("failed to get content info: %w", err))
 		}
 
 		// Step 1: Parse DuckDB to create party data

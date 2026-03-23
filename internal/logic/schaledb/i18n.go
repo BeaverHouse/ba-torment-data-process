@@ -3,6 +3,7 @@ package schaledb
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"ba-torment-data-process/internal/constants"
@@ -21,7 +22,7 @@ func loadLocalizationFull(lang string) *localizationRaw {
 
 	var data localizationRaw
 	if err := json.Unmarshal(byteValue, &data); err != nil {
-		log.Fatalf("Failed to unmarshal localization (%s): %v", lang, err)
+		panic(fmt.Sprintf("Failed to unmarshal localization (%s): %v", lang, err))
 	}
 
 	return &data

@@ -34,7 +34,7 @@ func loadLocalization(lang string) map[string]string {
 	var locData LocalizationRawData
 	err := json.Unmarshal(byteValue, &locData)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal localization: %v", err)
+		panic(fmt.Sprintf("Failed to unmarshal localization: %v", err))
 	}
 
 	return locData.BuffName
@@ -48,7 +48,7 @@ func loadJapaneseStudentInfo() map[string]JapaneseStudentInfo {
 	var studentData map[string]JapaneseStudentInfo
 	err := json.Unmarshal(byteValue, &studentData)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal student data: %v", err)
+		panic(fmt.Sprintf("Failed to unmarshal student data: %v", err))
 	}
 
 	return studentData
@@ -198,7 +198,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	var rawData map[string]any
 	err := json.Unmarshal(byteValue, &rawData)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal JSON: %v", err)
+		panic(fmt.Sprintf("Failed to unmarshal JSON: %v", err))
 	}
 
 	buffNames := loadLocalization("kr")

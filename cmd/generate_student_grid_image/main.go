@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	"ba-torment-data-process/internal/logic"
@@ -13,7 +14,7 @@ import (
 func main() {
 	if logic.IsLocalEnv() {
 		if err := godotenv.Load(); err != nil {
-			log.Fatalf("Failed to load .env file: %v", err)
+			panic(fmt.Sprintf("Failed to load .env file: %v", err))
 		}
 	}
 
@@ -21,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	if err := gridimage.GenerateGridImages(*dryRun); err != nil {
-		log.Fatalf("Failed to generate grid images: %v", err)
+		panic(fmt.Sprintf("Failed to generate grid images: %v", err))
 	}
 
 	log.Println("Successfully generated all grid images")
