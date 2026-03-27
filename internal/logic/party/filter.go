@@ -2,13 +2,16 @@ package party
 
 import (
 	"context"
-	"log"
 	"strconv"
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
+	"ba-torment-data-process/internal/ui"
+
+	gopostgres "github.com/BeaverHouse/go-common/database/postgres"
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 // === Filter update helpers ===
@@ -128,7 +131,7 @@ func createVideoFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter
 
 // CreateVideoFilter creates a video filter from verified YouTube analysis data in the database
 func CreateVideoFilter(raidID string) *types.BATormentFilter {
-	pool := postgres.InitFromEnv()
+	pool := gopostgres.InitFromEnv()
 	defer pool.Close()
 
 	ctx := context.Background()
@@ -136,12 +139,12 @@ func CreateVideoFilter(raidID string) *types.BATormentFilter {
 
 	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
 	if err != nil {
-		log.Printf("Failed to query YouTube analysis for %s: %v", raidID, err)
+		ui.Log.Warn("Failed to query YouTube analysis", logger.F("raidID", raidID), logger.F("error", err))
 		return nil
 	}
 
 	if len(analysisRows) == 0 {
-		log.Printf("No verified YouTube analysis found for %s", raidID)
+		ui.Log.Info("No verified YouTube analysis found", logger.F("raidID", raidID))
 		return nil
 	}
 
@@ -151,8 +154,7 @@ func CreateVideoFilter(raidID string) *types.BATormentFilter {
 		partyTeams = append(partyTeams, row.AnalysisResult.PartyData...)
 	}
 
-	log.Printf("Created video filter for %s with %d party teams from %d verified videos",
-		raidID, len(partyTeams), len(analysisRows))
+	ui.Log.Info("Created video filter", logger.F("raidID", raidID), logger.F("partyTeams", len(partyTeams)), logger.F("videos", len(analysisRows)))
 
 	return createVideoFilterFromPartyTeams(partyTeams)
 }

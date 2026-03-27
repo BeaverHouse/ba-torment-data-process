@@ -1,6 +1,10 @@
 # Environment variables
 .env*
 
+# Binary
+batorment
+batorment.exe
+
 # Test files
 /app/tests/files/*
 

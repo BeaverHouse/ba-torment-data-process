@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"ba-torment-data-process/internal/ui"
+
+	"github.com/BeaverHouse/go-common/env"
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 var (
@@ -37,7 +41,7 @@ func MarshalAndUpload(data any, path, fileName string, dryRun bool, successMsg s
 	}
 
 	if successMsg != "" {
-		log.Println(successMsg)
+		ui.Log.Info(successMsg)
 	}
 
 	return nil
@@ -72,7 +76,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		panic(fmt.Sprintf("API request failed: %v", err))
 	}
 
-	req.Header.Set("X-Access-Token", os.Getenv("BA_ANALYZER_SERVICE_TOKEN"))
+	req.Header.Set("X-Access-Token", env.GetEnv("BA_ANALYZER_SERVICE_TOKEN", ""))
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	client := &http.Client{}
@@ -87,7 +91,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		panic(fmt.Sprintf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body)))
 	}
 
-	log.Println("File uploaded successfully: ", fileName)
+	ui.Log.Info("File uploaded successfully", logger.F("file", fileName))
 	time.Sleep(2 * time.Second)
 
 	return nil

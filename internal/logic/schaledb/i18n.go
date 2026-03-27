@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/storage"
+	"ba-torment-data-process/internal/ui"
+
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 type localizationRaw struct {
@@ -47,7 +49,7 @@ func SaveI18nData(db *postgres.Queries) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Saved i18n school: %s", key)
+		ui.Log.Info("Saved i18n school", logger.F("key", key))
 	}
 
 	// Save Club
@@ -62,7 +64,7 @@ func SaveI18nData(db *postgres.Queries) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Saved i18n club: %s", key)
+		ui.Log.Info("Saved i18n club", logger.F("key", key))
 	}
 
 	return nil

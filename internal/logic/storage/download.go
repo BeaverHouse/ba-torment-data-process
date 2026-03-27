@@ -3,9 +3,12 @@ package storage
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
+
+	"ba-torment-data-process/internal/ui"
+
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 // GetDataFromURL gets data from URL.
@@ -28,6 +31,6 @@ func GetDataFromURL(url string) []byte {
 		panic(fmt.Sprintf("the data from URL is empty: %s", url))
 	}
 
-	log.Printf("Response successfully fetched: url=%s, duration=%s", url, time.Since(start))
+	ui.Log.Info("Response successfully fetched", logger.F("url", url), logger.F("duration", time.Since(start)))
 	return body
 }

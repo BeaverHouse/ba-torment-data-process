@@ -3,12 +3,14 @@ package analysis
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"sort"
 	"time"
 
 	"ba-torment-data-process/internal/types"
+	"ba-torment-data-process/internal/ui"
+
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 const PartyDataBaseURL = "https://twauaebyyujvvvusbrwe.supabase.co/storage/v1/object/public/pb7h4uvn2b6m0lyu7i6r3j8ac/batorment/v3/party"
@@ -21,18 +23,18 @@ func DownloadAllPartyData(contentIDs []string) map[string]*types.BATormentPartyD
 		url := PartyDataBaseURL + "/" + contentID + ".json"
 		data, err := fetchPartyData(url)
 		if err != nil {
-			log.Printf("Failed to fetch party data for %s: %v", contentID, err)
+			ui.Log.Warn("Failed to fetch party data", logger.F("contentID", contentID), logger.F("error", err))
 			continue
 		}
 
 		var partyData types.BATormentPartyData
 		if err := json.Unmarshal(data, &partyData); err != nil {
-			log.Printf("Failed to parse party data for %s: %v", contentID, err)
+			ui.Log.Warn("Failed to parse party data", logger.F("contentID", contentID), logger.F("error", err))
 			continue
 		}
 
 		result[contentID] = &partyData
-		log.Printf("Downloaded party data for %s: %d parties", contentID, len(partyData.PartyDetail))
+		ui.Log.Info("Downloaded party data", logger.F("contentID", contentID), logger.F("parties", len(partyData.PartyDetail)))
 	}
 
 	return result
@@ -56,7 +58,7 @@ func fetchPartyData(url string) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Printf("Fetched: url=%s, duration=%s", url, time.Since(start))
+	ui.Log.Info("Fetched", logger.F("url", url), logger.F("duration", time.Since(start)))
 	return body, nil
 }
 
@@ -72,22 +74,22 @@ func (e *httpError) Error() string {
 // RunTotalAnalysis runs the complete analysis
 // sortedContentIDs provides the order for raidAnalyses (sorted by start_date)
 func RunTotalAnalysis(partyDataMap map[string]*types.BATormentPartyData, sortedContentIDs []string) *types.TotalAnalysisOutput {
-	log.Printf("Starting total analysis with %d raids", len(partyDataMap))
+	ui.Log.Info("Starting total analysis", logger.F("raids", len(partyDataMap)))
 
 	// Raid analysis
-	log.Println("Running raid analyses...")
+	ui.Log.Info("Running raid analyses...")
 	raidAnalyses := RunRaidAnalyses(partyDataMap, sortedContentIDs)
-	log.Printf("Completed raid analyses: %d raids", len(raidAnalyses))
+	ui.Log.Info("Completed raid analyses", logger.F("raids", len(raidAnalyses)))
 
 	// Character analysis
-	log.Println("Running character analyses...")
+	ui.Log.Info("Running character analyses...")
 	characterAnalyses := RunCharacterAnalyses(partyDataMap, sortedContentIDs)
-	log.Printf("Completed character analyses: %d characters", len(characterAnalyses))
+	ui.Log.Info("Completed character analyses", logger.F("characters", len(characterAnalyses)))
 
 	// Calculate and assign overall rankings
-	log.Println("Calculating overall rankings...")
+	ui.Log.Info("Calculating overall rankings...")
 	AssignOverallRankings(characterAnalyses)
-	log.Println("Completed overall ranking calculation")
+	ui.Log.Info("Completed overall ranking calculation")
 
 	return &types.TotalAnalysisOutput{
 		GeneratedAt:       time.Now().Format(time.RFC3339),

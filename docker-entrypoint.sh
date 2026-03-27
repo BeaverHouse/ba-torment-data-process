@@ -9,7 +9,7 @@ echo ""
 # Step 1: Update SchaleDB data
 echo "[1/3] Updating student data from SchaleDB..."
 echo "--------------------------------------------"
-/app/bin/update_from_schaledb
+/app/bin/batorment update-from-schaledb
 if [ $? -eq 0 ]; then
     echo "✓ SchaleDB update completed successfully"
 else
@@ -20,7 +20,7 @@ fi
 echo ""
 echo "[2/3] Processing raid data..."
 echo "--------------------------------------------"
-/app/bin/process_raid
+/app/bin/batorment process-raid
 if [ $? -eq 0 ]; then
     echo "✓ Raid processing completed successfully"
 else
@@ -31,7 +31,7 @@ fi
 echo ""
 echo "[3/3] Running total analysis..."
 echo "--------------------------------------------"
-/app/bin/total_analysis
+/app/bin/batorment total-analysis
 if [ $? -eq 0 ]; then
     echo "✓ Total analysis completed successfully"
 else

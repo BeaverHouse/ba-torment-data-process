@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
-	"log"
 	"sort"
 	"strconv"
 
 	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
+	"ba-torment-data-process/internal/ui"
 
+	"github.com/BeaverHouse/go-common/logger"
 	"github.com/fogleman/gg"
 	_ "golang.org/x/image/webp"
 )
@@ -53,7 +54,7 @@ func GenerateGridImages(dryRun bool) error {
 	}
 
 	totalCount := len(students)
-	log.Printf("Total students with usage data: %d", totalCount)
+	ui.Log.Info("Total students with usage data", logger.F("count", totalCount))
 
 	// Calculate percentile cutoffs
 	tier1StartIdx := totalCount * tier1Start / 100
@@ -63,8 +64,10 @@ func GenerateGridImages(dryRun bool) error {
 	tier3StartIdx := totalCount * tier3Start / 100
 	tier3EndIdx := totalCount * tier3End / 100
 
-	log.Printf("Percentile cutoffs: Tier1=%d-%d, Tier2=%d-%d, Tier3=%d-%d",
-		tier1StartIdx, tier1EndIdx, tier2StartIdx, tier2EndIdx, tier3StartIdx, tier3EndIdx)
+	ui.Log.Info("Percentile cutoffs",
+		logger.F("tier1", fmt.Sprintf("%d-%d", tier1StartIdx, tier1EndIdx)),
+		logger.F("tier2", fmt.Sprintf("%d-%d", tier2StartIdx, tier2EndIdx)),
+		logger.F("tier3", fmt.Sprintf("%d-%d", tier3StartIdx, tier3EndIdx)))
 
 	// Generate tier grids
 	tiers := []struct {
@@ -81,8 +84,11 @@ func GenerateGridImages(dryRun bool) error {
 		tierStudents := students[tier.start:tier.end]
 		strikers, specials := splitBySquadType(tierStudents)
 
-		log.Printf("Tier %s%%: Total=%d, Strikers=%d, Specials=%d",
-			tier.name, len(tierStudents), len(strikers), len(specials))
+		ui.Log.Info("Tier stats",
+			logger.F("tier", tier.name+"%"),
+			logger.F("total", len(tierStudents)),
+			logger.F("strikers", len(strikers)),
+			logger.F("specials", len(specials)))
 
 		strikerFile := fmt.Sprintf("grid_striker_%s.jpg", tier.name)
 		specialFile := fmt.Sprintf("grid_special_%s.jpg", tier.name)
@@ -95,7 +101,7 @@ func GenerateGridImages(dryRun bool) error {
 		}
 	}
 
-	log.Printf("Successfully generated 6 grids")
+	ui.Log.Info("Successfully generated 6 grids")
 	return nil
 }
 
@@ -139,7 +145,7 @@ func splitBySquadType(students []StudentInfo) ([]StudentInfo, []StudentInfo) {
 
 func generateAndUploadGrid(students []StudentInfo, fileName string, dryRun bool) error {
 	if len(students) == 0 {
-		log.Printf("Skipping %s: no students", fileName)
+		ui.Log.Warn("Skipping grid", logger.F("file", fileName), logger.F("reason", "no students"))
 		return nil
 	}
 
@@ -152,7 +158,7 @@ func generateAndUploadGrid(students []StudentInfo, fileName string, dryRun bool)
 		return fmt.Errorf("failed to upload grid %s: %w", fileName, err)
 	}
 
-	log.Printf("Generated: %s (%d students)", fileName, len(students))
+	ui.Log.Info("Generated grid", logger.F("file", fileName), logger.F("students", len(students)))
 	return nil
 }
 
@@ -198,7 +204,7 @@ func generateGrid(students []StudentInfo) (image.Image, error) {
 		// Draw portrait from Supabase
 		portrait, err := fetchPortraitFromSupabase(student.ID)
 		if err != nil {
-			log.Printf("Failed to fetch portrait for %d: %v", student.ID, err)
+			ui.Log.Warn("Failed to fetch portrait", logger.F("studentID", student.ID), logger.F("error", err))
 			continue
 		}
 		dc.DrawImage(portrait, int(x)+padding, int(y)+padding+fontSize+6)

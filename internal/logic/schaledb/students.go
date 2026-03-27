@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -14,6 +13,9 @@ import (
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
+	"ba-torment-data-process/internal/ui"
+
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 // Localization data structure
@@ -210,7 +212,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	for studentID, studentData := range rawData {
 		dataMap, ok := studentData.(map[string]any)
 		if !ok {
-			log.Printf("Skipping invalid student data for ID %s", studentID)
+			ui.Log.Warn("Skipping invalid student data", logger.F("studentID", studentID))
 			continue
 		}
 
@@ -246,24 +248,24 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		// Convert processed map back to CompleteStudentData struct
 		processedJSON, err := json.Marshal(dataMap)
 		if err != nil {
-			log.Printf("Failed to marshal student data for ID %s: %v", studentID, err)
+			ui.Log.Warn("Failed to marshal student data", logger.F("studentID", studentID), logger.F("error", err))
 			continue
 		}
 
 		var completeData types.StudentData
 		err = json.Unmarshal(processedJSON, &completeData)
 		if err != nil {
-			log.Printf("Failed to unmarshal student data for ID %s: %v", studentID, err)
+			ui.Log.Warn("Failed to unmarshal student data", logger.F("studentID", studentID), logger.F("error", err))
 			continue
 		}
 		studentIDInt64, err := strconv.ParseInt(studentID, 10, 32)
 		if err != nil {
-			log.Printf("Failed to convert student ID %s to int: %v", studentID, err)
+			ui.Log.Warn("Failed to convert student ID to int", logger.F("studentID", studentID), logger.F("error", err))
 			continue
 		}
 		completeDataBytes, err := json.Marshal(completeData)
 		if err != nil {
-			log.Printf("Failed to marshal student data for ID %s: %v", studentID, err)
+			ui.Log.Warn("Failed to marshal student data", logger.F("studentID", studentID), logger.F("error", err))
 			continue
 		}
 
@@ -280,14 +282,14 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		// Upload image + wait 3 second. Supabase S3 has performance issue when uploading too many files at once.
 		err = uploadCharacterImage(int(studentIDInt64), false)
 		if err != nil {
-			log.Printf("Failed to upload image for student %s: %v", studentID, err)
+			ui.Log.Warn("Failed to upload image for student", logger.F("studentID", studentID), logger.F("error", err))
 			return nil, err
 		}
-		log.Printf("Student %s (%s) processed", studentID, completeData.Name)
+		ui.Log.Info("Student processed", logger.F("studentID", studentID), logger.F("name", completeData.Name))
 	}
 
 	if err := storage.MarshalAndUpload(studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
-		log.Printf("Failed to upload student map: %v", err)
+		ui.Log.Warn("Failed to upload student map", logger.F("error", err))
 		return nil, err
 	}
 
@@ -317,7 +319,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	}
 
 	if err := storage.MarshalAndUpload(studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
-		log.Printf("Failed to upload student search map: %v", err)
+		ui.Log.Warn("Failed to upload student search map", logger.F("error", err))
 		return nil, err
 	}
 
