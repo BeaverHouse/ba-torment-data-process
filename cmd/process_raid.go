@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"ba-torment-data-process/internal/db/postgres"
+	"ba-torment-data-process/internal/logic/analysis"
 	"ba-torment-data-process/internal/logic/party"
 	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/ui"
@@ -26,6 +27,7 @@ var processRaidCmd = &cobra.Command{
 	Short: "Process all raid content data",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		recent, _ := cmd.Flags().GetInt("recent")
 
 		pool := gopostgres.InitFromEnv()
 		defer pool.Close()
@@ -38,10 +40,49 @@ var processRaidCmd = &cobra.Command{
 		}
 
 		partyUpdated := make(map[string]bool)
+		recentStart := len(contents) - recent
+		if recentStart < 0 {
+			recentStart = 0
+		}
 
-		for _, content := range contents {
+		// Older contents: download existing party JSON from S3, update video refs only
+		for _, content := range contents[:recentStart] {
 			contentID := content.ContentID
-			ui.Log.Info("Processing content", logger.F("contentID", contentID))
+			ui.Log.Info("Updating video refs only (cached)", logger.F("contentID", contentID))
+
+			partyData := analysis.DownloadPartyData(contentID)
+			if partyData == nil {
+				ui.Log.Warn("No cached party data found, skipping", logger.F("contentID", contentID))
+				partyUpdated[contentID] = false
+				continue
+			}
+			partyUpdated[contentID] = true
+
+			fileName := fmt.Sprintf("%s.json", contentID)
+
+			updated, err := party.UpdateVideoRefWithData(partyData, contentID)
+			if err != nil {
+				ui.Log.Warn("Failed to update video refs", logger.F("contentID", contentID), logger.F("error", err))
+			} else {
+				ui.Log.Info("Updated video references", logger.F("count", updated), logger.F("contentID", contentID))
+			}
+
+			if err := storage.MarshalAndUpload(partyData, "batorment/v3/party", fileName, dryRun, ""); err != nil {
+				ui.Log.Warn("Failed to upload party data", logger.F("error", err))
+			}
+
+			videoFilter := party.CreateVideoFilter(contentID)
+			if videoFilter != nil {
+				if err := storage.MarshalAndUpload(videoFilter, "batorment/v3/video-filter", fileName, dryRun, ""); err != nil {
+					ui.Log.Warn("Failed to upload video filter", logger.F("error", err))
+				}
+			}
+		}
+
+		// Recent contents: full DuckDB parsing + all processing
+		for _, content := range contents[recentStart:] {
+			contentID := content.ContentID
+			ui.Log.Info("Full processing (DuckDB)", logger.F("contentID", contentID))
 
 			contentInfo, err := queries.GetContentByID(context.Background(), contentID)
 			if err != nil {
@@ -182,5 +223,6 @@ var processRaidCmd = &cobra.Command{
 
 func init() {
 	processRaidCmd.Flags().Bool("dry-run", false, "Run in dry-run mode (no actual uploads)")
+	processRaidCmd.Flags().Int("recent", 5, "Number of recent raids to fully process from DuckDB (older ones use cached S3 data)")
 	rootCmd.AddCommand(processRaidCmd)
 }

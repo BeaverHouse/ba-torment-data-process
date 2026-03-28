@@ -15,6 +15,25 @@ import (
 
 const PartyDataBaseURL = "https://twauaebyyujvvvusbrwe.supabase.co/storage/v1/object/public/pb7h4uvn2b6m0lyu7i6r3j8ac/batorment/v3/party"
 
+// DownloadPartyData downloads party data for a single content ID, returns nil on failure.
+func DownloadPartyData(contentID string) *types.BATormentPartyData {
+	url := PartyDataBaseURL + "/" + contentID + ".json"
+	data, err := fetchPartyData(url)
+	if err != nil {
+		ui.Log.Warn("Failed to fetch party data", logger.F("contentID", contentID), logger.F("error", err))
+		return nil
+	}
+
+	var partyData types.BATormentPartyData
+	if err := json.Unmarshal(data, &partyData); err != nil {
+		ui.Log.Warn("Failed to parse party data", logger.F("contentID", contentID), logger.F("error", err))
+		return nil
+	}
+
+	ui.Log.Info("Downloaded party data", logger.F("contentID", contentID), logger.F("parties", len(partyData.PartyDetail)))
+	return &partyData
+}
+
 // DownloadAllPartyData downloads party data for all content IDs
 func DownloadAllPartyData(contentIDs []string) map[string]*types.BATormentPartyData {
 	result := make(map[string]*types.BATormentPartyData)
