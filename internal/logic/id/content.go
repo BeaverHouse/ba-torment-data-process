@@ -1,7 +1,7 @@
 package id
 
 import (
-	"log"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -18,11 +18,11 @@ func ExtractGroupID(contentID string) string {
 func SplitSeasonString(season string) (string, int) {
 	parts := strings.Split(season, "-")
 	if len(parts) != 2 {
-		log.Fatalf("Invalid season string: %s", season)
+		panic(fmt.Sprintf("Invalid season string: %s", season))
 	}
 	category, err := strconv.Atoi(parts[1])
 	if err != nil {
-		log.Fatalf("Invalid season string: %s", season)
+		panic(fmt.Sprintf("Invalid season string: %s", season))
 	}
 	return strings.Replace(parts[0], "3S", "S", 1), category
 }

@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 )
 
 // Reads /data/<lang>/items.json file
@@ -19,7 +18,7 @@ func loadItems(lang string) map[string]types.FavorItem {
 	var items map[string]types.FavorItem
 	err := json.Unmarshal(byteValue, &items)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal localization: %v", err)
+		panic(fmt.Sprintf("Failed to unmarshal localization: %v", err))
 	}
 
 	return items

@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"ba-torment-data-process/internal/ui"
+
+	"github.com/BeaverHouse/go-common/env"
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 var (
@@ -37,7 +41,7 @@ func MarshalAndUpload(data any, path, fileName string, dryRun bool, successMsg s
 	}
 
 	if successMsg != "" {
-		log.Println(successMsg)
+		ui.Log.Info(successMsg)
 	}
 
 	return nil
@@ -55,10 +59,10 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 
 	part, err := writer.CreateFormFile("file", fileName)
 	if err != nil {
-		log.Fatalf("Failed to create form file: %v", err)
+		panic(fmt.Sprintf("Failed to create form file: %v", err))
 	}
 	if _, err := io.Copy(part, bytes.NewReader(data)); err != nil {
-		log.Fatalf("Failed to copy file data: %v", err)
+		panic(fmt.Sprintf("Failed to copy file data: %v", err))
 	}
 	writer.WriteField("upload_path", path)
 	writer.Close()
@@ -69,25 +73,25 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		body,
 	)
 	if err != nil {
-		log.Fatalf("API request failed: %v", err)
+		panic(fmt.Sprintf("API request failed: %v", err))
 	}
 
-	req.Header.Set("X-Access-Token", os.Getenv("BA_ANALYZER_SERVICE_TOKEN"))
+	req.Header.Set("X-Access-Token", env.GetEnv("BA_ANALYZER_SERVICE_TOKEN", ""))
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("API request failed: %v", err)
+		panic(fmt.Sprintf("API request failed: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Fatalf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body))
+		panic(fmt.Sprintf("failed to upload image: status %d, body: %s", resp.StatusCode, string(body)))
 	}
 
-	log.Println("File uploaded successfully: ", fileName)
+	ui.Log.Info("File uploaded successfully", logger.F("file", fileName))
 	time.Sleep(2 * time.Second)
 
 	return nil

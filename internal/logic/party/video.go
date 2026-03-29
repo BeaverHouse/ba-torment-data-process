@@ -3,11 +3,14 @@ package party
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
+	"ba-torment-data-process/internal/ui"
+
+	gopostgres "github.com/BeaverHouse/go-common/database/postgres"
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 const (
@@ -17,7 +20,7 @@ const (
 
 // UpdateVideoRefWithData updates video references for party data
 func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) (int, error) {
-	pool := postgres.InitFromEnv()
+	pool := gopostgres.InitFromEnv()
 	defer pool.Close()
 
 	ctx := context.Background()
@@ -29,7 +32,7 @@ func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) 
 	}
 
 	if len(analysisRows) == 0 {
-		log.Printf("No verified YouTube analysis found for %s", raidID)
+		ui.Log.Info("No verified YouTube analysis found", logger.F("raidID", raidID))
 		return 0, nil
 	}
 
@@ -42,7 +45,7 @@ func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) 
 	}
 
 	updated := matchAndUpdateVideoRefs(partyData, analysisResults, videoIDMap)
-	log.Printf("Updated %d video references for raid %s", updated, raidID)
+	ui.Log.Info("Updated video references", logger.F("count", updated), logger.F("raidID", raidID))
 
 	return updated, nil
 }
@@ -69,7 +72,7 @@ func matchAndUpdateVideoRefs(partyData *types.BATormentPartyData, analysisResult
 				party.VideoID = &videoID
 				usedVideos[videoID] = true
 				updated++
-				log.Printf("Matched party (rank=%d, score=%d) with video: %s", party.Rank, party.Score, videoID)
+				ui.Log.Info("Matched party with video", logger.F("rank", party.Rank), logger.F("score", party.Score), logger.F("videoID", videoID))
 				break
 			}
 		}
