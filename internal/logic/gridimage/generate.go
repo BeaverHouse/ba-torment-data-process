@@ -107,7 +107,10 @@ func GenerateGridImages(dryRun bool) error {
 
 func fetchAllStudents() ([]StudentInfo, error) {
 	url := supabaseBaseURL + "/batorment/v3/total-analysis.json"
-	data := storage.GetDataFromURL(url)
+	data, err := storage.GetDataFromURL(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch total-analysis: %w", err)
+	}
 
 	var analysis types.TotalAnalysisOutput
 	if err := json.Unmarshal(data, &analysis); err != nil {
@@ -223,7 +226,10 @@ func generateGrid(students []StudentInfo) (image.Image, error) {
 
 func fetchPortraitFromSupabase(studentID int) (image.Image, error) {
 	url := supabaseBaseURL + "/batorment/character/" + strconv.Itoa(studentID) + ".webp"
-	data := storage.GetDataFromURL(url)
+	data, err := storage.GetDataFromURL(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch portrait %d: %w", studentID, err)
+	}
 
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {

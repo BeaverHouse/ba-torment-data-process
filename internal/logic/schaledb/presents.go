@@ -11,21 +11,26 @@ import (
 )
 
 // Reads /data/<lang>/items.json file
-func loadItems(lang string) map[string]types.FavorItem {
+func loadItems(lang string) (map[string]types.FavorItem, error) {
 	url := fmt.Sprintf("%s/data/%s/items.json", constants.SchaleDBURL, lang)
-	byteValue := storage.GetDataFromURL(url)
-
-	var items map[string]types.FavorItem
-	err := json.Unmarshal(byteValue, &items)
+	byteValue, err := storage.GetDataFromURL(url)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal localization: %v", err))
+		return nil, fmt.Errorf("failed to fetch items (%s): %w", lang, err)
 	}
 
-	return items
+	var items map[string]types.FavorItem
+	if err := json.Unmarshal(byteValue, &items); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal items (%s): %w", lang, err)
+	}
+
+	return items, nil
 }
 
 func ParseSchaleDBPresents(db *postgres.Queries) (map[string]*types.FavorItem, error) {
-	items := loadItems("kr")
+	items, err := loadItems("kr")
+	if err != nil {
+		return nil, err
+	}
 
 	for _, item := range items {
 		db.InsertPresent(context.Background(), postgres.InsertPresentParams{

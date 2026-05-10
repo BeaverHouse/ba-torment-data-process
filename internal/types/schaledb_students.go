@@ -81,10 +81,10 @@ type StudentSkills struct {
 
 // Individual skill
 type StudentSkill struct {
-	Cost        []int          `json:"Cost,omitempty"`
-	Desc        string         `json:"Desc"`
-	Effects     []SkillEffect  `json:"Effects"`
-	ExtraSkills []ExtraSkill   `json:"ExtraSkills,omitempty"`
+	Cost        []int         `json:"Cost,omitempty"`
+	Desc        string        `json:"Desc"`
+	Effects     []SkillEffect `json:"Effects"`
+	ExtraSkills []ExtraSkill  `json:"ExtraSkills,omitempty"`
 }
 
 // Extra skill for selectable EX skills

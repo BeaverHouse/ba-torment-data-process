@@ -1,18 +1,20 @@
-# Environment variables
 .env*
+.DS_Store
 
-# Binary
+.vscode/
+
+# Build dependencies & artifact binaries
+dist/
+vendor/
 batorment
 batorment.exe
 
-# Test files
-/app/tests/files/*
-
-# Arona AI formatted data
-/data
+# Temporary & test data
+.agent-cache/
+.agent-check-result.json
 
 # DuckDB database
 *.db
 
-# Temp files
-.DS_store
+# Arona AI formatted data
+/data

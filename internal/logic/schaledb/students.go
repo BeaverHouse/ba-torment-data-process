@@ -29,31 +29,35 @@ type JapaneseStudentInfo struct {
 }
 
 // Reads /data/<lang>/localization.min.json file and returns BuffName map
-func loadLocalization(lang string) map[string]string {
+func loadLocalization(lang string) (map[string]string, error) {
 	url := fmt.Sprintf("%s/data/%s/localization.min.json", constants.SchaleDBURL, lang)
-	byteValue := storage.GetDataFromURL(url)
-
-	var locData LocalizationRawData
-	err := json.Unmarshal(byteValue, &locData)
+	byteValue, err := storage.GetDataFromURL(url)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal localization: %v", err))
+		return nil, fmt.Errorf("failed to fetch localization (%s): %w", lang, err)
 	}
 
-	return locData.BuffName
+	var locData LocalizationRawData
+	if err := json.Unmarshal(byteValue, &locData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal localization (%s): %w", lang, err)
+	}
+
+	return locData.BuffName, nil
 }
 
 // Reads /data/jp/students.json file and returns Japanese student info map.
 // This is used to get student names in Japanese.
-func loadJapaneseStudentInfo() map[string]JapaneseStudentInfo {
-	byteValue := storage.GetDataFromURL(constants.SchaleDBURL + "/data/jp/students.json")
-
-	var studentData map[string]JapaneseStudentInfo
-	err := json.Unmarshal(byteValue, &studentData)
+func loadJapaneseStudentInfo() (map[string]JapaneseStudentInfo, error) {
+	byteValue, err := storage.GetDataFromURL(constants.SchaleDBURL + "/data/jp/students.json")
 	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal student data: %v", err))
+		return nil, fmt.Errorf("failed to fetch japanese student info: %w", err)
 	}
 
-	return studentData
+	var studentData map[string]JapaneseStudentInfo
+	if err := json.Unmarshal(byteValue, &studentData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal japanese student info: %w", err)
+	}
+
+	return studentData, nil
 }
 
 // replaceBuffTags replaces <b:> and <d:> tags in skill descriptions with Korean names
@@ -195,16 +199,24 @@ func processSkillDesc(skillMap map[string]any, buffNames map[string]string) {
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
 
-	byteValue := storage.GetDataFromURL(constants.SchaleDBURL + "/data/kr/students.json")
-
-	var rawData map[string]any
-	err := json.Unmarshal(byteValue, &rawData)
+	byteValue, err := storage.GetDataFromURL(constants.SchaleDBURL + "/data/kr/students.json")
 	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal JSON: %v", err))
+		return nil, fmt.Errorf("failed to fetch students: %w", err)
 	}
 
-	buffNames := loadLocalization("kr")
-	japaneseStudentInfo := loadJapaneseStudentInfo()
+	var rawData map[string]any
+	if err := json.Unmarshal(byteValue, &rawData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal students: %w", err)
+	}
+
+	buffNames, err := loadLocalization("kr")
+	if err != nil {
+		return nil, err
+	}
+	japaneseStudentInfo, err := loadJapaneseStudentInfo()
+	if err != nil {
+		return nil, err
+	}
 
 	result := make(map[string]*types.StudentData)
 	studentMap := make(map[string]string)
@@ -328,14 +340,15 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 
 // Uploads the character image from SchaleDB via File Manager API.
 func uploadCharacterImage(id int, dryRun bool) error {
-
-	imgBytes := storage.GetDataFromURL(constants.SchaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
+	imgBytes, err := storage.GetDataFromURL(constants.SchaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
+	if err != nil {
+		return fmt.Errorf("failed to fetch character image %d: %w", id, err)
+	}
 
 	path := "batorment/character"
 
-	err := storage.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun)
-	if err != nil {
-		return fmt.Errorf("failed to upload image to S3: %v", err)
+	if err := storage.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun); err != nil {
+		return fmt.Errorf("failed to upload image to S3: %w", err)
 	}
 
 	return nil
