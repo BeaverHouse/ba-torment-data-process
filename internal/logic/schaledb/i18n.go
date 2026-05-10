@@ -18,22 +18,34 @@ type localizationRaw struct {
 	Club   map[string]string `json:"Club"`
 }
 
-func loadLocalizationFull(lang string) *localizationRaw {
+func loadLocalizationFull(lang string) (*localizationRaw, error) {
 	url := constants.SchaleDBURL + "data/" + lang + "/localization.min.json"
-	byteValue := storage.GetDataFromURL(url)
+	byteValue, err := storage.GetDataFromURL(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch localization (%s): %w", lang, err)
+	}
 
 	var data localizationRaw
 	if err := json.Unmarshal(byteValue, &data); err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal localization (%s): %v", lang, err))
+		return nil, fmt.Errorf("failed to unmarshal localization (%s): %w", lang, err)
 	}
 
-	return &data
+	return &data, nil
 }
 
 func SaveI18nData(db *postgres.Queries) error {
-	kr := loadLocalizationFull("kr")
-	ja := loadLocalizationFull("jp")
-	en := loadLocalizationFull("en")
+	kr, err := loadLocalizationFull("kr")
+	if err != nil {
+		return err
+	}
+	ja, err := loadLocalizationFull("jp")
+	if err != nil {
+		return err
+	}
+	en, err := loadLocalizationFull("en")
+	if err != nil {
+		return err
+	}
 
 	ctx := context.Background()
 
