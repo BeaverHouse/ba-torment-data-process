@@ -69,7 +69,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 
 	req, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("%s/files/upload", fileUploadURL),
+		fmt.Sprintf("%s/files/upload/raw", fileUploadURL),
 		body,
 	)
 	if err != nil {
