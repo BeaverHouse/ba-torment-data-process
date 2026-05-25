@@ -27,7 +27,7 @@ func downloadDuckDB(dateString string) error {
 		return fmt.Errorf("BATORMENT_DUCKDB_REMOTE_URL environment variable is not set")
 	}
 
-	url := fmt.Sprintf("%s/v1/JP/%s.db", baseURL, dateString)
+	url := fmt.Sprintf("%s/v2/JP/%s.db", baseURL, dateString)
 	fileName := fmt.Sprintf("%s.db", dateString)
 
 	ui.Log.Info("Downloading DuckDB", logger.F("url", url))
