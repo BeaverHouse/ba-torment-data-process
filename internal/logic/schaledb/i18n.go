@@ -46,6 +46,14 @@ func SaveI18nData(db *postgres.Queries) error {
 	if err != nil {
 		return err
 	}
+	// zh is non-fatal: SchaleDB occasionally lags on Chinese translations.
+	// Missing zh values leave name_zh as DEFAULT '' and i18n.Get() falls back
+	// to ko/en when looking up.
+	zh, err := loadLocalizationFull("zh")
+	if err != nil {
+		ui.Log.Warn("Failed to load Chinese localization (non-fatal)", logger.F("error", err))
+		zh = &localizationRaw{School: map[string]string{}, Club: map[string]string{}}
+	}
 
 	ctx := context.Background()
 
@@ -57,6 +65,7 @@ func SaveI18nData(db *postgres.Queries) error {
 			NameKo:   kr.School[key],
 			NameJa:   ja.School[key],
 			NameEn:   en.School[key],
+			NameZh:   zh.School[key],
 		})
 		if err != nil {
 			return err
@@ -72,6 +81,7 @@ func SaveI18nData(db *postgres.Queries) error {
 			NameKo:   kr.Club[key],
 			NameJa:   ja.Club[key],
 			NameEn:   en.Club[key],
+			NameZh:   zh.Club[key],
 		})
 		if err != nil {
 			return err

@@ -28,6 +28,21 @@ type JapaneseStudentInfo struct {
 	SearchTags []string `json:"SearchTags"`
 }
 
+// loadStudentNames returns map[studentID] = {Name, SearchTags} for any
+// SchaleDB locale (kr, jp, en, zh). The shape matches JapaneseStudentInfo.
+func loadStudentNames(lang string) (map[string]JapaneseStudentInfo, error) {
+	url := fmt.Sprintf("%s/data/%s/students.json", constants.SchaleDBURL, lang)
+	byteValue, err := storage.GetDataFromURL(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch students (%s): %w", lang, err)
+	}
+	var data map[string]JapaneseStudentInfo
+	if err := json.Unmarshal(byteValue, &data); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal students (%s): %w", lang, err)
+	}
+	return data, nil
+}
+
 // Reads /data/<lang>/localization.min.json file and returns BuffName map
 func loadLocalization(lang string) (map[string]string, error) {
 	url := fmt.Sprintf("%s/data/%s/localization.min.json", constants.SchaleDBURL, lang)
@@ -217,6 +232,18 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	if err != nil {
 		return nil, err
 	}
+	// FE multi-lang: nameEn / nameZh + extra search tags. Non-fatal if upstream
+	// 404s — we just skip that locale and the FE falls back to ko.
+	englishStudentInfo, err := loadStudentNames("en")
+	if err != nil {
+		ui.Log.Warn("Failed to load English student names", logger.F("error", err))
+		englishStudentInfo = map[string]JapaneseStudentInfo{}
+	}
+	chineseStudentInfo, err := loadStudentNames("zh")
+	if err != nil {
+		ui.Log.Warn("Failed to load Chinese student names", logger.F("error", err))
+		chineseStudentInfo = map[string]JapaneseStudentInfo{}
+	}
 
 	result := make(map[string]*types.StudentData)
 	studentMap := make(map[string]string)
@@ -281,11 +308,20 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 			continue
 		}
 
+		// Merge search tags across all four locales so LLM keyword search
+		// resolves nicknames and abbreviations regardless of user language.
+		mergedTags := append([]string{}, completeData.SearchTags...)
+		mergedTags = append(mergedTags, japaneseStudentInfo[studentID].SearchTags...)
+		mergedTags = append(mergedTags, englishStudentInfo[studentID].SearchTags...)
+		mergedTags = append(mergedTags, chineseStudentInfo[studentID].SearchTags...)
+
 		db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
 			StudentID:     int32(studentIDInt64),
 			NameKo:        completeData.Name,
 			NameJa:        japaneseStudentInfo[studentID].Name,
-			SearchKeyword: append(completeData.SearchTags, japaneseStudentInfo[studentID].SearchTags...),
+			NameEn:        englishStudentInfo[studentID].Name,
+			NameZh:        chineseStudentInfo[studentID].Name,
+			SearchKeyword: mergedTags,
 			Detail:        completeDataBytes,
 		})
 
@@ -305,28 +341,35 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		return nil, err
 	}
 
-	// Create student search map with Japanese names and search keywords
+	// Create student search map with multi-language names and merged search keywords.
 	studentSearchMap := make(map[string]map[string]any)
 	for studentID, studentData := range rawData {
-		if dataMap, ok := studentData.(map[string]any); ok {
-			if nameKo, exists := dataMap["Name"]; exists {
-				// Convert []interface{} to []string for SearchTags
-				var searchTags []string
-				if tags, ok := dataMap["SearchTags"].([]interface{}); ok {
-					for _, tag := range tags {
-						if tagStr, ok := tag.(string); ok {
-							searchTags = append(searchTags, tagStr)
-						}
-					}
+		dataMap, ok := studentData.(map[string]any)
+		if !ok {
+			continue
+		}
+		nameKo, exists := dataMap["Name"]
+		if !exists {
+			continue
+		}
+		var koTags []string
+		if tags, ok := dataMap["SearchTags"].([]interface{}); ok {
+			for _, tag := range tags {
+				if s, ok := tag.(string); ok {
+					koTags = append(koTags, s)
 				}
-
-				searchData := map[string]any{
-					"nameKo":         nameKo,
-					"nameJa":         japaneseStudentInfo[studentID].Name,
-					"searchKeywords": append(searchTags, japaneseStudentInfo[studentID].SearchTags...),
-				}
-				studentSearchMap[studentID] = searchData
 			}
+		}
+		searchKeywords := append([]string{}, koTags...)
+		searchKeywords = append(searchKeywords, japaneseStudentInfo[studentID].SearchTags...)
+		searchKeywords = append(searchKeywords, englishStudentInfo[studentID].SearchTags...)
+		searchKeywords = append(searchKeywords, chineseStudentInfo[studentID].SearchTags...)
+		studentSearchMap[studentID] = map[string]any{
+			"nameKo":         nameKo,
+			"nameJa":         japaneseStudentInfo[studentID].Name,
+			"nameEn":         englishStudentInfo[studentID].Name,
+			"nameZh":         chineseStudentInfo[studentID].Name,
+			"searchKeywords": searchKeywords,
 		}
 	}
 

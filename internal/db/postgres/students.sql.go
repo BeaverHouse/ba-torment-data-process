@@ -10,11 +10,13 @@ import (
 )
 
 const insertStudentData = `-- name: InsertStudentData :exec
-INSERT INTO batorment_v3.students (student_id, name_ko, name_ja, search_keyword, detail, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-ON CONFLICT (student_id) DO UPDATE SET 
+INSERT INTO batorment_v3.students (student_id, name_ko, name_ja, name_en, name_zh, search_keyword, detail, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+ON CONFLICT (student_id) DO UPDATE SET
     name_ko = EXCLUDED.name_ko,
     name_ja = EXCLUDED.name_ja,
+    name_en = EXCLUDED.name_en,
+    name_zh = EXCLUDED.name_zh,
     search_keyword = EXCLUDED.search_keyword,
     detail = EXCLUDED.detail,
     updated_at = NOW()
@@ -24,6 +26,8 @@ type InsertStudentDataParams struct {
 	StudentID     int32    `json:"student_id"`
 	NameKo        string   `json:"name_ko"`
 	NameJa        string   `json:"name_ja"`
+	NameEn        string   `json:"name_en"`
+	NameZh        string   `json:"name_zh"`
 	SearchKeyword []string `json:"search_keyword"`
 	Detail        []byte   `json:"detail"`
 }
@@ -33,6 +37,8 @@ func (q *Queries) InsertStudentData(ctx context.Context, arg InsertStudentDataPa
 		arg.StudentID,
 		arg.NameKo,
 		arg.NameJa,
+		arg.NameEn,
+		arg.NameZh,
 		arg.SearchKeyword,
 		arg.Detail,
 	)
