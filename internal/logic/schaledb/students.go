@@ -308,11 +308,20 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 			continue
 		}
 
+		// Merge search tags across all four locales so LLM keyword search
+		// resolves nicknames and abbreviations regardless of user language.
+		mergedTags := append([]string{}, completeData.SearchTags...)
+		mergedTags = append(mergedTags, japaneseStudentInfo[studentID].SearchTags...)
+		mergedTags = append(mergedTags, englishStudentInfo[studentID].SearchTags...)
+		mergedTags = append(mergedTags, chineseStudentInfo[studentID].SearchTags...)
+
 		db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
 			StudentID:     int32(studentIDInt64),
 			NameKo:        completeData.Name,
 			NameJa:        japaneseStudentInfo[studentID].Name,
-			SearchKeyword: append(completeData.SearchTags, japaneseStudentInfo[studentID].SearchTags...),
+			NameEn:        englishStudentInfo[studentID].Name,
+			NameZh:        chineseStudentInfo[studentID].Name,
+			SearchKeyword: mergedTags,
 			Detail:        completeDataBytes,
 		})
 

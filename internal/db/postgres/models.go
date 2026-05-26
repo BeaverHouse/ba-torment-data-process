@@ -114,6 +114,7 @@ type BatormentV3I18n struct {
 	NameKo    string           `json:"name_ko"`
 	NameJa    string           `json:"name_ja"`
 	NameEn    string           `json:"name_en"`
+	NameZh    string           `json:"name_zh"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
@@ -132,6 +133,8 @@ type BatormentV3Student struct {
 	StudentID     int32            `json:"student_id"`
 	NameKo        string           `json:"name_ko"`
 	NameJa        string           `json:"name_ja"`
+	NameEn        string           `json:"name_en"`
+	NameZh        string           `json:"name_zh"`
 	SearchKeyword []string         `json:"search_keyword"`
 	Detail        []byte           `json:"detail"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
