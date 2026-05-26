@@ -32,7 +32,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_PAT_ORGANIZATION }}
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -58,7 +58,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_PAT_ORGANIZATION }}
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -82,7 +82,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_PAT_ORGANIZATION }}
       - name: Create and push multi-arch manifest
         run: |
           SHA=${{ needs.generate-sha.outputs.sha }}
