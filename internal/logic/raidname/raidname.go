@@ -19,29 +19,29 @@ const (
 
 var raidTypes = map[string]map[Lang]string{
 	"총력전": {LangEN: "Total Assault", LangZH: "总力战"},
-	"대결전": {LangEN: "Eliminate Raid", LangZH: "大决战"},
+	"대결전": {LangEN: "Grand Assault", LangZH: "大决战"},
 }
 
 var locations = map[string]map[Lang]string{
-	"시가지": {LangEN: "City", LangZH: "城区"},
-	"야외":  {LangEN: "Field", LangZH: "野外"},
+	"시가지": {LangEN: "Street", LangZH: "街区"},
+	"야외":  {LangEN: "Outdoor", LangZH: "户外"},
 	"실내":  {LangEN: "Indoor", LangZH: "室内"},
 }
 
 // Boss names use the global EN release / common CN community translations.
 var bosses = map[string]map[Lang]string{
-	"호드":     {LangEN: "Hod", LangZH: "何德"},
-	"비나":     {LangEN: "Binah", LangZH: "比那"},
-	"페로로지라":  {LangEN: "Perorodzilla", LangZH: "佩罗罗吉拉"},
-	"헤세드":    {LangEN: "Hesed", LangZH: "海瑟德"},
-	"게부라":    {LangEN: "Geburah", LangZH: "葛布拉"},
-	"시로쿠로":   {LangEN: "Shirokuro", LangZH: "白黑"},
-	"예소드":    {LangEN: "Yesod", LangZH: "耶素德"},
-	"예로니무스":  {LangEN: "Hieronymus", LangZH: "耶罗尼姆斯"},
+	"호드":     {LangEN: "Hod", LangZH: "Hod"},
+	"비나":     {LangEN: "Binah", LangZH: "Binah"},
+	"페로로지라":  {LangEN: "Perorodzilla", LangZH: "佩洛洛斯拉"},
+	"헤세드":    {LangEN: "Chesed", LangZH: "Chesed"},
+	"게부라":    {LangEN: "Geburah", LangZH: "Geburah"},
+	"시로쿠로":   {LangEN: "Shiro & Kuro", LangZH: "白＆黑"},
+	"예소드":    {LangEN: "Yesod", LangZH: "Yesod"},
+	"예로니무스":  {LangEN: "Hieronymus", LangZH: "希罗尼穆斯"},
 	"쿠로카게":   {LangEN: "Kurokage", LangZH: "黑影"},
-	"카이텐":    {LangEN: "Kaiten", LangZH: "海天"},
-	"호버크래프트": {LangEN: "Hovercraft", LangZH: "气垫船"},
-	"고즈":     {LangEN: "Goz", LangZH: "高兹"},
+	"카이텐":    {LangEN: "KAITEN FX Mk.0", LangZH: "KAITEN FX 0型"},
+	"호버크래프트": {LangEN: "Hovercraft", LangZH: "灾厄之狐"},
+	"고즈":     {LangEN: "Goz", LangZH: "戈兹"},
 	"드럼바르카":  {LangEN: "Drum Barca", LangZH: "鼓波卡"},
 }
 
