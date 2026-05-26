@@ -12,20 +12,20 @@ func TestTranslate(t *testing.T) {
 		{"총력전 S88 시가지 카이텐", LangKO, "총력전 S88 시가지 카이텐"},
 
 		// Total Assault (no armor / difficulty parens).
-		{"총력전 S88 시가지 카이텐", LangEN, "Total Assault S88 City Kaiten"},
-		{"총력전 S88 시가지 카이텐", LangZH, "总力战 S88 城区 海天"},
-		{"총력전 S85 야외 호버크래프트", LangEN, "Total Assault S85 Field Hovercraft"},
-		{"총력전 S89 시가지 드럼바르카", LangZH, "总力战 S89 城区 鼓波卡"},
+		{"총력전 S88 시가지 카이텐", LangEN, "Total Assault S88 Street KAITEN FX Mk.0"},
+		{"총력전 S88 시가지 카이텐", LangZH, "总力战 S88 街区 KAITEN FX 0型"},
+		{"총력전 S85 야외 호버크래프트", LangEN, "Total Assault S85 Outdoor Hovercraft"},
+		{"총력전 S89 시가지 드럼바르카", LangZH, "总力战 S89 街区 鼓波卡"},
 
-		// Eliminate Raid with armor + difficulty.
-		{"대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)", LangEN, "Eliminate Raid S33 City Kurokage (Elastic Armor, Insane)"},
-		{"대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)", LangZH, "大决战 S33 城区 黑影 (弹力装甲, 疯狂)"},
+		// Grand Assault with armor + difficulty.
+		{"대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)", LangEN, "Grand Assault S33 Street Kurokage (Elastic Armor, Insane)"},
+		{"대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)", LangZH, "大决战 S33 街区 黑影 (弹力装甲, 疯狂)"},
 
 		// Tight comma (no space after) — historical entries use this form.
-		{"대결전 S32 야외 페로로지라 (중장갑,토먼트)", LangEN, "Eliminate Raid S32 Field Perorodzilla (Heavy Armor, Torment)"},
+		{"대결전 S32 야외 페로로지라 (중장갑,토먼트)", LangEN, "Grand Assault S32 Outdoor Perorodzilla (Heavy Armor, Torment)"},
 
 		// Double-space variant seen in S30 entry.
-		{"대결전 S30 시가지 시로쿠로  (탄력장갑,토먼트)", LangEN, "Eliminate Raid S30 City Shirokuro (Elastic Armor, Torment)"},
+		{"대결전 S30 시가지 시로쿠로  (탄력장갑,토먼트)", LangEN, "Grand Assault S30 Street Shiro & Kuro (Elastic Armor, Torment)"},
 
 		// Unknown title falls back to the input.
 		{"unknown garbage", LangEN, "unknown garbage"},
