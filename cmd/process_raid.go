@@ -8,6 +8,7 @@ import (
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/analysis"
 	"ba-torment-data-process/internal/logic/party"
+	"ba-torment-data-process/internal/logic/raidname"
 	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
 	"ba-torment-data-process/internal/ui"
@@ -19,7 +20,10 @@ import (
 
 type raidListItem struct {
 	ID           string `json:"id"`
-	Name         string `json:"name"`
+	Name         string `json:"name"` // legacy = name_ko; FE migrating to per-locale fields below
+	NameKO       string `json:"name_ko"`
+	NameEN       string `json:"name_en"`
+	NameZH       string `json:"name_zh"`
 	TopLevel     string `json:"top_level"`
 	PartyUpdated bool   `json:"party_updated"`
 }
@@ -70,6 +74,9 @@ var processRaidCmd = &cobra.Command{
 			raidList = append(raidList, raidListItem{
 				ID:           content.ContentID,
 				Name:         content.Title,
+				NameKO:       content.Title,
+				NameEN:       raidname.Translate(content.Title, raidname.LangEN),
+				NameZH:       raidname.Translate(content.Title, raidname.LangZH),
 				TopLevel:     string(content.TopLevel),
 				PartyUpdated: partyUpdated[content.ContentID],
 			})
