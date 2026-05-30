@@ -2,6 +2,7 @@ package schaledb
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -17,6 +18,24 @@ import (
 
 	"github.com/BeaverHouse/go-common/logger"
 )
+
+// SchaleDB zh students.json ships empty SearchTags for every student, so
+// Chinese community nicknames never reach searchKeywords the way kr/jp tags
+// do. zhAliasesRaw is a hand-curated studentID -> nicknames map that fills
+// that gap. Skin shorthand that decomposes by rule (水X = swimsuit X) is left
+// to the LLM prompt; this file holds only meaning-based nicknames (社长, 魔王…).
+//
+//go:embed zh_aliases.json
+var zhAliasesRaw []byte
+
+func loadZhAliases() map[string][]string {
+	var m map[string][]string
+	if err := json.Unmarshal(zhAliasesRaw, &m); err != nil {
+		ui.Log.Warn("Failed to parse zh aliases", logger.F("error", err))
+		return map[string][]string{}
+	}
+	return m
+}
 
 // Localization data structure
 type LocalizationRawData struct {
@@ -245,6 +264,8 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		chineseStudentInfo = map[string]JapaneseStudentInfo{}
 	}
 
+	zhAliases := loadZhAliases()
+
 	result := make(map[string]*types.StudentData)
 	studentMap := make(map[string]string)
 
@@ -314,6 +335,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		mergedTags = append(mergedTags, japaneseStudentInfo[studentID].SearchTags...)
 		mergedTags = append(mergedTags, englishStudentInfo[studentID].SearchTags...)
 		mergedTags = append(mergedTags, chineseStudentInfo[studentID].SearchTags...)
+		mergedTags = append(mergedTags, zhAliases[studentID]...)
 
 		db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
 			StudentID:     int32(studentIDInt64),
@@ -364,6 +386,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		searchKeywords = append(searchKeywords, japaneseStudentInfo[studentID].SearchTags...)
 		searchKeywords = append(searchKeywords, englishStudentInfo[studentID].SearchTags...)
 		searchKeywords = append(searchKeywords, chineseStudentInfo[studentID].SearchTags...)
+		searchKeywords = append(searchKeywords, zhAliases[studentID]...)
 		studentSearchMap[studentID] = map[string]any{
 			"nameKo":         nameKo,
 			"nameJa":         japaneseStudentInfo[studentID].Name,
