@@ -1,17 +1,22 @@
+# Secrets
 .env*
+
+# OS Artifacts
 .DS_Store
 
-.vscode/
-
-# Build dependencies & artifact binaries
+# Build dependencies & artifacts
 dist/
 vendor/
-batorment
-batorment.exe
+*.exe
+batorment/
 
-# Temporary & test data
-.agent-cache/
+# Local Go workspace (never committed)
+go.work
+go.work.sum
+
+# Custom gitignored files
 .agent-check-result.json
+.agent-cache/
 
 # DuckDB database
 *.db

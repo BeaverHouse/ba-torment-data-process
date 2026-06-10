@@ -3,13 +3,12 @@ package schaledb
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/storage"
-	"ba-torment-data-process/internal/ui"
 
+	"github.com/BeaverHouse/go-common/errorhandle"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
@@ -18,40 +17,40 @@ type localizationRaw struct {
 	Club   map[string]string `json:"Club"`
 }
 
-func loadLocalizationFull(lang string) (*localizationRaw, error) {
+func loadLocalizationFull(log logger.Logger, lang string) (*localizationRaw, error) {
 	url := constants.SchaleDBURL + "data/" + lang + "/localization.min.json"
-	byteValue, err := storage.GetDataFromURL(url)
+	byteValue, err := storage.GetDataFromURL(log, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch localization (%s): %w", lang, err)
+		return nil, constants.ErrDataFetch("localization ("+lang+")", err)
 	}
 
 	var data localizationRaw
 	if err := json.Unmarshal(byteValue, &data); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal localization (%s): %w", lang, err)
+		return nil, constants.ErrDataDecode("localization ("+lang+")", err)
 	}
 
 	return &data, nil
 }
 
-func SaveI18nData(db *postgres.Queries) error {
-	kr, err := loadLocalizationFull("kr")
+func SaveI18nData(log logger.Logger, db *postgres.Queries) error {
+	kr, err := loadLocalizationFull(log, "kr")
 	if err != nil {
 		return err
 	}
-	ja, err := loadLocalizationFull("jp")
+	ja, err := loadLocalizationFull(log, "jp")
 	if err != nil {
 		return err
 	}
-	en, err := loadLocalizationFull("en")
+	en, err := loadLocalizationFull(log, "en")
 	if err != nil {
 		return err
 	}
 	// zh is non-fatal: SchaleDB occasionally lags on Chinese translations.
 	// Missing zh values leave name_zh as DEFAULT '' and i18n.Get() falls back
 	// to ko/en when looking up.
-	zh, err := loadLocalizationFull("zh")
+	zh, err := loadLocalizationFull(log, "zh")
 	if err != nil {
-		ui.Log.Warn("Failed to load Chinese localization (non-fatal)", logger.F("error", err))
+		log.Warn("Failed to load Chinese localization (non-fatal)", logger.Field{Key: "error", Value: err})
 		zh = &localizationRaw{School: map[string]string{}, Club: map[string]string{}}
 	}
 
@@ -68,9 +67,9 @@ func SaveI18nData(db *postgres.Queries) error {
 			NameZh:   zh.School[key],
 		})
 		if err != nil {
-			return err
+			return errorhandle.ErrDBOperation("upsert i18n school", err)
 		}
-		ui.Log.Info("Saved i18n school", logger.F("key", key))
+		log.Info("Saved i18n school", logger.Field{Key: "key", Value: key})
 	}
 
 	// Save Club
@@ -84,9 +83,9 @@ func SaveI18nData(db *postgres.Queries) error {
 			NameZh:   zh.Club[key],
 		})
 		if err != nil {
-			return err
+			return errorhandle.ErrDBOperation("upsert i18n club", err)
 		}
-		ui.Log.Info("Saved i18n club", logger.F("key", key))
+		log.Info("Saved i18n club", logger.Field{Key: "key", Value: key})
 	}
 
 	return nil

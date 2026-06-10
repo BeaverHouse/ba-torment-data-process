@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"ba-torment-data-process/internal/ui"
+	"ba-torment-data-process/internal/constants"
 
 	"github.com/BeaverHouse/go-common/env"
+	"github.com/BeaverHouse/go-common/errorhandle"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
@@ -22,7 +23,7 @@ var (
 )
 
 // MarshalAndUpload marshals data to JSON and uploads it.
-func MarshalAndUpload(data any, path, fileName string, dryRun bool, successMsg string) error {
+func MarshalAndUpload(log logger.Logger, data any, path, fileName string, dryRun bool, successMsg string) error {
 	var dataBytes []byte
 	var err error
 
@@ -32,23 +33,23 @@ func MarshalAndUpload(data any, path, fileName string, dryRun bool, successMsg s
 		dataBytes, err = json.Marshal(data)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to marshal data: %w", err)
+		return constants.ErrDataEncode(fileName, err)
 	}
 
-	err = UploadFile(path, fileName, dataBytes, dryRun)
+	err = UploadFile(log, path, fileName, dataBytes, dryRun)
 	if err != nil {
-		return fmt.Errorf("failed to upload file: %w", err)
+		return err
 	}
 
 	if successMsg != "" {
-		ui.Log.Info(successMsg)
+		log.Info(successMsg)
 	}
 
 	return nil
 }
 
 // UploadFile uploads a file to S3 via File Manager API.
-func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
+func UploadFile(log logger.Logger, path string, fileName string, data []byte, dryRun bool) error {
 	if dryRun {
 		os.MkdirAll(filepath.Join("files", path), 0755)
 		return os.WriteFile(filepath.Join("files", path, fileName), data, 0644)
@@ -59,10 +60,10 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 
 	part, err := writer.CreateFormFile("file", fileName)
 	if err != nil {
-		return fmt.Errorf("failed to create form file: %w", err)
+		return constants.ErrDataEncode(fileName, err)
 	}
 	if _, err := io.Copy(part, bytes.NewReader(data)); err != nil {
-		return fmt.Errorf("failed to copy file data: %w", err)
+		return constants.ErrDataEncode(fileName, err)
 	}
 	writer.WriteField("upload_path", path)
 	writer.Close()
@@ -73,7 +74,7 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 		body,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to build upload request: %w", err)
+		return errorhandle.ErrInternal(err)
 	}
 
 	req.Header.Set("X-Access-Token", env.GetEnv("BA_ANALYZER_SERVICE_TOKEN", ""))
@@ -82,16 +83,16 @@ func UploadFile(path string, fileName string, data []byte, dryRun bool) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("upload request failed: %w", err)
+		return constants.ErrUpload(fileName, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("upload failed: status %d, body: %s", resp.StatusCode, string(respBody))
+		return constants.ErrUpstreamBadStatus(fmt.Sprintf("upload status %d, body: %s", resp.StatusCode, string(respBody)))
 	}
 
-	ui.Log.Info("File uploaded successfully", logger.F("file", fileName))
+	log.Info("File uploaded successfully", logger.Field{Key: "file", Value: fileName})
 	time.Sleep(2 * time.Second)
 
 	return nil

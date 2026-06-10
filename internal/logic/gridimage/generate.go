@@ -9,11 +9,12 @@ import (
 	"sort"
 	"strconv"
 
+	"ba-torment-data-process/internal/constants"
 	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
-	"ba-torment-data-process/internal/ui"
 
+	"github.com/BeaverHouse/go-common/errorhandle"
 	"github.com/BeaverHouse/go-common/logger"
 	"github.com/fogleman/gg"
 	_ "golang.org/x/image/webp"
@@ -47,14 +48,14 @@ type StudentInfo struct {
 // GenerateGridImages generates images based on percentile tiers:
 // - 10-25%, 25-40%, 40-55%: grids for Striker/Special (6 grids)
 // Total: 6 images
-func GenerateGridImages(dryRun bool) error {
-	students, err := fetchAllStudents()
+func GenerateGridImages(log logger.Logger, dryRun bool) error {
+	students, err := fetchAllStudents(log)
 	if err != nil {
-		return fmt.Errorf("failed to fetch students: %w", err)
+		return err
 	}
 
 	totalCount := len(students)
-	ui.Log.Info("Total students with usage data", logger.F("count", totalCount))
+	log.Info("Total students with usage data", logger.Field{Key: "count", Value: totalCount})
 
 	// Calculate percentile cutoffs
 	tier1StartIdx := totalCount * tier1Start / 100
@@ -64,10 +65,10 @@ func GenerateGridImages(dryRun bool) error {
 	tier3StartIdx := totalCount * tier3Start / 100
 	tier3EndIdx := totalCount * tier3End / 100
 
-	ui.Log.Info("Percentile cutoffs",
-		logger.F("tier1", fmt.Sprintf("%d-%d", tier1StartIdx, tier1EndIdx)),
-		logger.F("tier2", fmt.Sprintf("%d-%d", tier2StartIdx, tier2EndIdx)),
-		logger.F("tier3", fmt.Sprintf("%d-%d", tier3StartIdx, tier3EndIdx)))
+	log.Info("Percentile cutoffs",
+		logger.Field{Key: "tier1", Value: fmt.Sprintf("%d-%d", tier1StartIdx, tier1EndIdx)},
+		logger.Field{Key: "tier2", Value: fmt.Sprintf("%d-%d", tier2StartIdx, tier2EndIdx)},
+		logger.Field{Key: "tier3", Value: fmt.Sprintf("%d-%d", tier3StartIdx, tier3EndIdx)})
 
 	// Generate tier grids
 	tiers := []struct {
@@ -84,37 +85,37 @@ func GenerateGridImages(dryRun bool) error {
 		tierStudents := students[tier.start:tier.end]
 		strikers, specials := splitBySquadType(tierStudents)
 
-		ui.Log.Info("Tier stats",
-			logger.F("tier", tier.name+"%"),
-			logger.F("total", len(tierStudents)),
-			logger.F("strikers", len(strikers)),
-			logger.F("specials", len(specials)))
+		log.Info("Tier stats",
+			logger.Field{Key: "tier", Value: tier.name + "%"},
+			logger.Field{Key: "total", Value: len(tierStudents)},
+			logger.Field{Key: "strikers", Value: len(strikers)},
+			logger.Field{Key: "specials", Value: len(specials)})
 
 		strikerFile := fmt.Sprintf("grid_striker_%s.jpg", tier.name)
 		specialFile := fmt.Sprintf("grid_special_%s.jpg", tier.name)
 
-		if err := generateAndUploadGrid(strikers, strikerFile, dryRun); err != nil {
+		if err := generateAndUploadGrid(log, strikers, strikerFile, dryRun); err != nil {
 			return err
 		}
-		if err := generateAndUploadGrid(specials, specialFile, dryRun); err != nil {
+		if err := generateAndUploadGrid(log, specials, specialFile, dryRun); err != nil {
 			return err
 		}
 	}
 
-	ui.Log.Info("Successfully generated 6 grids")
+	log.Info("Successfully generated 6 grids")
 	return nil
 }
 
-func fetchAllStudents() ([]StudentInfo, error) {
+func fetchAllStudents(log logger.Logger) ([]StudentInfo, error) {
 	url := supabaseBaseURL + "/batorment/v3/total-analysis.json"
-	data, err := storage.GetDataFromURL(url)
+	data, err := storage.GetDataFromURL(log, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch total-analysis: %w", err)
+		return nil, constants.ErrDataFetch("total-analysis", err)
 	}
 
 	var analysis types.TotalAnalysisOutput
 	if err := json.Unmarshal(data, &analysis); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal total-analysis: %w", err)
+		return nil, constants.ErrDataDecode("total-analysis", err)
 	}
 
 	var students []StudentInfo
@@ -146,26 +147,26 @@ func splitBySquadType(students []StudentInfo) ([]StudentInfo, []StudentInfo) {
 	return strikers, specials
 }
 
-func generateAndUploadGrid(students []StudentInfo, fileName string, dryRun bool) error {
+func generateAndUploadGrid(log logger.Logger, students []StudentInfo, fileName string, dryRun bool) error {
 	if len(students) == 0 {
-		ui.Log.Warn("Skipping grid", logger.F("file", fileName), logger.F("reason", "no students"))
+		log.Warn("Skipping grid", logger.Field{Key: "file", Value: fileName}, logger.Field{Key: "reason", Value: "no students"})
 		return nil
 	}
 
-	img, err := generateGrid(students)
+	img, err := generateGrid(log, students)
 	if err != nil {
-		return fmt.Errorf("failed to generate grid %s: %w", fileName, err)
+		return constants.ErrGridGenerate(fileName, err)
 	}
 
-	if err := uploadGridImage(img, fileName, dryRun); err != nil {
-		return fmt.Errorf("failed to upload grid %s: %w", fileName, err)
+	if err := uploadGridImage(log, img, fileName, dryRun); err != nil {
+		return constants.ErrUpload(fmt.Sprintf("grid %s", fileName), err)
 	}
 
-	ui.Log.Info("Generated grid", logger.F("file", fileName), logger.F("students", len(students)))
+	log.Info("Generated grid", logger.Field{Key: "file", Value: fileName}, logger.Field{Key: "students", Value: len(students)})
 	return nil
 }
 
-func generateGrid(students []StudentInfo) (image.Image, error) {
+func generateGrid(log logger.Logger, students []StudentInfo) (image.Image, error) {
 	rows := (len(students) + cols - 1) / cols
 	width := cols * cellWidth
 	height := rows * cellHeight
@@ -205,9 +206,9 @@ func generateGrid(students []StudentInfo) (image.Image, error) {
 		y := float64(row * cellHeight)
 
 		// Draw portrait from Supabase
-		portrait, err := fetchPortraitFromSupabase(student.ID)
+		portrait, err := fetchPortraitFromSupabase(log, student.ID)
 		if err != nil {
-			ui.Log.Warn("Failed to fetch portrait", logger.F("studentID", student.ID), logger.F("error", err))
+			log.Warn("Failed to fetch portrait", logger.Field{Key: "studentID", Value: student.ID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
 		dc.DrawImage(portrait, int(x)+padding, int(y)+padding+fontSize+6)
@@ -224,25 +225,25 @@ func generateGrid(students []StudentInfo) (image.Image, error) {
 	return dc.Image(), nil
 }
 
-func fetchPortraitFromSupabase(studentID int) (image.Image, error) {
+func fetchPortraitFromSupabase(log logger.Logger, studentID int) (image.Image, error) {
 	url := supabaseBaseURL + "/batorment/character/" + strconv.Itoa(studentID) + ".webp"
-	data, err := storage.GetDataFromURL(url)
+	data, err := storage.GetDataFromURL(log, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch portrait %d: %w", studentID, err)
+		return nil, constants.ErrDataFetch(fmt.Sprintf("portrait %d", studentID), err)
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode image: %w", err)
+		return nil, constants.ErrDataDecode(fmt.Sprintf("portrait %d", studentID), err)
 	}
 
 	return img, nil
 }
 
-func uploadGridImage(img image.Image, fileName string, dryRun bool) error {
+func uploadGridImage(log logger.Logger, img image.Image, fileName string, dryRun bool) error {
 	var buf bytes.Buffer
 	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
-		return fmt.Errorf("failed to encode image: %w", err)
+		return errorhandle.ErrInternal(err)
 	}
-	return storage.UploadFile("batorment/v3/grid", fileName, buf.Bytes(), dryRun)
+	return storage.UploadFile(log, "batorment/v3/grid", fileName, buf.Bytes(), dryRun)
 }

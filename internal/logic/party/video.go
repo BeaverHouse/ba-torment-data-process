@@ -2,14 +2,13 @@ package party
 
 import (
 	"context"
-	"fmt"
 
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
-	"ba-torment-data-process/internal/ui"
 
 	gopostgres "github.com/BeaverHouse/go-common/database/postgres"
+	"github.com/BeaverHouse/go-common/errorhandle"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
@@ -19,7 +18,7 @@ const (
 )
 
 // UpdateVideoRefWithData updates video references for party data
-func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) (int, error) {
+func UpdateVideoRefWithData(log logger.Logger, partyData *types.BATormentPartyData, raidID string) (int, error) {
 	pool := gopostgres.InitFromEnv()
 	defer pool.Close()
 
@@ -28,11 +27,11 @@ func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) 
 
 	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to query YouTube analysis: %w", err)
+		return 0, errorhandle.ErrDBOperation("get verified YouTube analysis", err)
 	}
 
 	if len(analysisRows) == 0 {
-		ui.Log.Info("No verified YouTube analysis found", logger.F("raidID", raidID))
+		log.Info("No verified YouTube analysis found", logger.Field{Key: "raidID", Value: raidID})
 		return 0, nil
 	}
 
@@ -44,13 +43,13 @@ func UpdateVideoRefWithData(partyData *types.BATormentPartyData, raidID string) 
 		videoIDMap[idx] = row.VideoID
 	}
 
-	updated := matchAndUpdateVideoRefs(partyData, analysisResults, videoIDMap)
-	ui.Log.Info("Updated video references", logger.F("count", updated), logger.F("raidID", raidID))
+	updated := matchAndUpdateVideoRefs(log, partyData, analysisResults, videoIDMap)
+	log.Info("Updated video references", logger.Field{Key: "count", Value: updated}, logger.Field{Key: "raidID", Value: raidID})
 
 	return updated, nil
 }
 
-func matchAndUpdateVideoRefs(partyData *types.BATormentPartyData, analysisResults []types.YoutubeAnalysisResult, videoIDMap map[int]string) int {
+func matchAndUpdateVideoRefs(log logger.Logger, partyData *types.BATormentPartyData, analysisResults []types.YoutubeAnalysisResult, videoIDMap map[int]string) int {
 	updated := 0
 	usedVideos := make(map[string]bool)
 
@@ -72,7 +71,7 @@ func matchAndUpdateVideoRefs(partyData *types.BATormentPartyData, analysisResult
 				party.VideoID = &videoID
 				usedVideos[videoID] = true
 				updated++
-				ui.Log.Info("Matched party with video", logger.F("rank", party.Rank), logger.F("score", party.Score), logger.F("videoID", videoID))
+				log.Info("Matched party with video", logger.Field{Key: "rank", Value: party.Rank}, logger.Field{Key: "score", Value: party.Score}, logger.Field{Key: "videoID", Value: videoID})
 				break
 			}
 		}
