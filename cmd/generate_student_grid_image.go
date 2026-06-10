@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-
 	"ba-torment-data-process/internal/logic/gridimage"
-	"ba-torment-data-process/internal/ui"
 
+	"github.com/BeaverHouse/go-common/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -15,11 +13,16 @@ var generateStudentGridImageCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-		if err := gridimage.GenerateGridImages(dryRun); err != nil {
-			return fmt.Errorf("failed to generate grid images: %w", err)
+		log, err := logger.NewLogger()
+		if err != nil {
+			return err
 		}
 
-		ui.Log.Info("Successfully generated all grid images")
+		if err := gridimage.GenerateGridImages(log, dryRun); err != nil {
+			return err
+		}
+
+		log.Info("Successfully generated all grid images")
 		return nil
 	},
 }

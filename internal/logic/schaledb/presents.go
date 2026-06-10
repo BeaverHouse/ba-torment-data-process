@@ -8,26 +8,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/BeaverHouse/go-common/logger"
 )
 
 // Reads /data/<lang>/items.json file
-func loadItems(lang string) (map[string]types.FavorItem, error) {
+func loadItems(log logger.Logger, lang string) (map[string]types.FavorItem, error) {
 	url := fmt.Sprintf("%s/data/%s/items.json", constants.SchaleDBURL, lang)
-	byteValue, err := storage.GetDataFromURL(url)
+	byteValue, err := storage.GetDataFromURL(log, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch items (%s): %w", lang, err)
+		return nil, constants.ErrDataFetch(fmt.Sprintf("items (%s)", lang), err)
 	}
 
 	var items map[string]types.FavorItem
 	if err := json.Unmarshal(byteValue, &items); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal items (%s): %w", lang, err)
+		return nil, constants.ErrDataDecode(fmt.Sprintf("items (%s)", lang), err)
 	}
 
 	return items, nil
 }
 
-func ParseSchaleDBPresents(db *postgres.Queries) (map[string]*types.FavorItem, error) {
-	items, err := loadItems("kr")
+func ParseSchaleDBPresents(log logger.Logger, db *postgres.Queries) (map[string]*types.FavorItem, error) {
+	items, err := loadItems(log, "kr")
 	if err != nil {
 		return nil, err
 	}

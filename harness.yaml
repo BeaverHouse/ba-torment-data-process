@@ -1,0 +1,5 @@
+# Opt into the go-workflow harness (austincli agent check). Presence is the only
+# switch — there is no profile to set or mis-set. What runs is derived from facts:
+#   always     — expression rules, raw-SQL discipline, go 1.26 (any opted-in repo)
+#   deployable — + role-axis core & go-common, when a Dockerfile is present
+#   web        — + web shape, when an internal/api or internal/mcp dir is present

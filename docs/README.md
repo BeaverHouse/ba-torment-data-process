@@ -28,9 +28,9 @@ Most of the processed data is uploaded to Supabase Storage, but some data is sto
    - Total analysis: WIP
    - Student mapping JSON: WIP
 
-## Deployment
+## Concept & Deployment
 
-See [Docker deployment guide](./docker.md) for containerized deployment instructions.
+See [Concept](./concept.md) for the CLI's subcommands, container pipeline, and build/deploy.
 
 ## Environment variables
 

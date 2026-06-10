@@ -14,7 +14,6 @@ import (
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
-	"ba-torment-data-process/internal/ui"
 
 	"github.com/BeaverHouse/go-common/logger"
 )
@@ -28,10 +27,10 @@ import (
 //go:embed zh_aliases.json
 var zhAliasesRaw []byte
 
-func loadZhAliases() map[string][]string {
+func loadZhAliases(log logger.Logger) map[string][]string {
 	var m map[string][]string
 	if err := json.Unmarshal(zhAliasesRaw, &m); err != nil {
-		ui.Log.Warn("Failed to parse zh aliases", logger.F("error", err))
+		log.Warn("Failed to parse zh aliases", logger.Field{Key: "error", Value: err})
 		return map[string][]string{}
 	}
 	return m
@@ -49,30 +48,30 @@ type JapaneseStudentInfo struct {
 
 // loadStudentNames returns map[studentID] = {Name, SearchTags} for any
 // SchaleDB locale (kr, jp, en, zh). The shape matches JapaneseStudentInfo.
-func loadStudentNames(lang string) (map[string]JapaneseStudentInfo, error) {
+func loadStudentNames(log logger.Logger, lang string) (map[string]JapaneseStudentInfo, error) {
 	url := fmt.Sprintf("%s/data/%s/students.json", constants.SchaleDBURL, lang)
-	byteValue, err := storage.GetDataFromURL(url)
+	byteValue, err := storage.GetDataFromURL(log, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch students (%s): %w", lang, err)
+		return nil, constants.ErrDataFetch(fmt.Sprintf("students (%s)", lang), err)
 	}
 	var data map[string]JapaneseStudentInfo
 	if err := json.Unmarshal(byteValue, &data); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal students (%s): %w", lang, err)
+		return nil, constants.ErrDataDecode(fmt.Sprintf("students (%s)", lang), err)
 	}
 	return data, nil
 }
 
 // Reads /data/<lang>/localization.min.json file and returns BuffName map
-func loadLocalization(lang string) (map[string]string, error) {
+func loadLocalization(log logger.Logger, lang string) (map[string]string, error) {
 	url := fmt.Sprintf("%s/data/%s/localization.min.json", constants.SchaleDBURL, lang)
-	byteValue, err := storage.GetDataFromURL(url)
+	byteValue, err := storage.GetDataFromURL(log, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch localization (%s): %w", lang, err)
+		return nil, constants.ErrDataFetch(fmt.Sprintf("localization (%s)", lang), err)
 	}
 
 	var locData LocalizationRawData
 	if err := json.Unmarshal(byteValue, &locData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal localization (%s): %w", lang, err)
+		return nil, constants.ErrDataDecode(fmt.Sprintf("localization (%s)", lang), err)
 	}
 
 	return locData.BuffName, nil
@@ -80,15 +79,15 @@ func loadLocalization(lang string) (map[string]string, error) {
 
 // Reads /data/jp/students.json file and returns Japanese student info map.
 // This is used to get student names in Japanese.
-func loadJapaneseStudentInfo() (map[string]JapaneseStudentInfo, error) {
-	byteValue, err := storage.GetDataFromURL(constants.SchaleDBURL + "/data/jp/students.json")
+func loadJapaneseStudentInfo(log logger.Logger) (map[string]JapaneseStudentInfo, error) {
+	byteValue, err := storage.GetDataFromURL(log, constants.SchaleDBURL+"/data/jp/students.json")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch japanese student info: %w", err)
+		return nil, constants.ErrDataFetch("japanese student info", err)
 	}
 
 	var studentData map[string]JapaneseStudentInfo
 	if err := json.Unmarshal(byteValue, &studentData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal japanese student info: %w", err)
+		return nil, constants.ErrDataDecode("japanese student info", err)
 	}
 
 	return studentData, nil
@@ -231,40 +230,40 @@ func processSkillDesc(skillMap map[string]any, buffNames map[string]string) {
 }
 
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
-func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData, error) {
+func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]*types.StudentData, error) {
 
-	byteValue, err := storage.GetDataFromURL(constants.SchaleDBURL + "/data/kr/students.json")
+	byteValue, err := storage.GetDataFromURL(log, constants.SchaleDBURL+"/data/kr/students.json")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch students: %w", err)
+		return nil, constants.ErrDataFetch("students", err)
 	}
 
 	var rawData map[string]any
 	if err := json.Unmarshal(byteValue, &rawData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal students: %w", err)
+		return nil, constants.ErrDataDecode("students", err)
 	}
 
-	buffNames, err := loadLocalization("kr")
+	buffNames, err := loadLocalization(log, "kr")
 	if err != nil {
 		return nil, err
 	}
-	japaneseStudentInfo, err := loadJapaneseStudentInfo()
+	japaneseStudentInfo, err := loadJapaneseStudentInfo(log)
 	if err != nil {
 		return nil, err
 	}
 	// FE multi-lang: nameEn / nameZh + extra search tags. Non-fatal if upstream
 	// 404s — we just skip that locale and the FE falls back to ko.
-	englishStudentInfo, err := loadStudentNames("en")
+	englishStudentInfo, err := loadStudentNames(log, "en")
 	if err != nil {
-		ui.Log.Warn("Failed to load English student names", logger.F("error", err))
+		log.Warn("Failed to load English student names", logger.Field{Key: "error", Value: err})
 		englishStudentInfo = map[string]JapaneseStudentInfo{}
 	}
-	chineseStudentInfo, err := loadStudentNames("zh")
+	chineseStudentInfo, err := loadStudentNames(log, "zh")
 	if err != nil {
-		ui.Log.Warn("Failed to load Chinese student names", logger.F("error", err))
+		log.Warn("Failed to load Chinese student names", logger.Field{Key: "error", Value: err})
 		chineseStudentInfo = map[string]JapaneseStudentInfo{}
 	}
 
-	zhAliases := loadZhAliases()
+	zhAliases := loadZhAliases(log)
 
 	result := make(map[string]*types.StudentData)
 	studentMap := make(map[string]string)
@@ -272,7 +271,7 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 	for studentID, studentData := range rawData {
 		dataMap, ok := studentData.(map[string]any)
 		if !ok {
-			ui.Log.Warn("Skipping invalid student data", logger.F("studentID", studentID))
+			log.Warn("Skipping invalid student data", logger.Field{Key: "studentID", Value: studentID})
 			continue
 		}
 
@@ -308,24 +307,24 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		// Convert processed map back to CompleteStudentData struct
 		processedJSON, err := json.Marshal(dataMap)
 		if err != nil {
-			ui.Log.Warn("Failed to marshal student data", logger.F("studentID", studentID), logger.F("error", err))
+			log.Warn("Failed to marshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
 
 		var completeData types.StudentData
 		err = json.Unmarshal(processedJSON, &completeData)
 		if err != nil {
-			ui.Log.Warn("Failed to unmarshal student data", logger.F("studentID", studentID), logger.F("error", err))
+			log.Warn("Failed to unmarshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
 		studentIDInt64, err := strconv.ParseInt(studentID, 10, 32)
 		if err != nil {
-			ui.Log.Warn("Failed to convert student ID to int", logger.F("studentID", studentID), logger.F("error", err))
+			log.Warn("Failed to convert student ID to int", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
 		completeDataBytes, err := json.Marshal(completeData)
 		if err != nil {
-			ui.Log.Warn("Failed to marshal student data", logger.F("studentID", studentID), logger.F("error", err))
+			log.Warn("Failed to marshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
 
@@ -350,16 +349,16 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		studentMap[studentID] = completeData.Name
 
 		// Upload image + wait 3 second. Supabase S3 has performance issue when uploading too many files at once.
-		err = uploadCharacterImage(int(studentIDInt64), false)
+		err = uploadCharacterImage(log, int(studentIDInt64), false)
 		if err != nil {
-			ui.Log.Warn("Failed to upload image for student", logger.F("studentID", studentID), logger.F("error", err))
+			log.Warn("Failed to upload image for student", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			return nil, err
 		}
-		ui.Log.Info("Student processed", logger.F("studentID", studentID), logger.F("name", completeData.Name))
+		log.Info("Student processed", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "name", Value: completeData.Name})
 	}
 
-	if err := storage.MarshalAndUpload(studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
-		ui.Log.Warn("Failed to upload student map", logger.F("error", err))
+	if err := storage.MarshalAndUpload(log, studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
+		log.Warn("Failed to upload student map", logger.Field{Key: "error", Value: err})
 		return nil, err
 	}
 
@@ -396,8 +395,8 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 		}
 	}
 
-	if err := storage.MarshalAndUpload(studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
-		ui.Log.Warn("Failed to upload student search map", logger.F("error", err))
+	if err := storage.MarshalAndUpload(log, studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
+		log.Warn("Failed to upload student search map", logger.Field{Key: "error", Value: err})
 		return nil, err
 	}
 
@@ -405,16 +404,16 @@ func ParseSchaleDBStudents(db *postgres.Queries) (map[string]*types.StudentData,
 }
 
 // Uploads the character image from SchaleDB via File Manager API.
-func uploadCharacterImage(id int, dryRun bool) error {
-	imgBytes, err := storage.GetDataFromURL(constants.SchaleDBURL + "images/student/icon/" + strconv.Itoa(id) + ".webp")
+func uploadCharacterImage(log logger.Logger, id int, dryRun bool) error {
+	imgBytes, err := storage.GetDataFromURL(log, constants.SchaleDBURL+"images/student/icon/"+strconv.Itoa(id)+".webp")
 	if err != nil {
-		return fmt.Errorf("failed to fetch character image %d: %w", id, err)
+		return constants.ErrDataFetch(fmt.Sprintf("character image %d", id), err)
 	}
 
 	path := "batorment/character"
 
-	if err := storage.UploadFile(path, strconv.Itoa(id)+".webp", imgBytes, dryRun); err != nil {
-		return fmt.Errorf("failed to upload image to S3: %w", err)
+	if err := storage.UploadFile(log, path, strconv.Itoa(id)+".webp", imgBytes, dryRun); err != nil {
+		return err
 	}
 
 	return nil

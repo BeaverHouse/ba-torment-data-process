@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"ba-torment-data-process/internal/types"
-	"ba-torment-data-process/internal/ui"
 
 	"github.com/BeaverHouse/go-common/logger"
 )
@@ -16,51 +15,51 @@ import (
 const PartyDataBaseURL = "https://twauaebyyujvvvusbrwe.supabase.co/storage/v1/object/public/pb7h4uvn2b6m0lyu7i6r3j8ac/batorment/v3/party"
 
 // DownloadPartyData downloads party data for a single content ID, returns nil on failure.
-func DownloadPartyData(contentID string) *types.BATormentPartyData {
+func DownloadPartyData(log logger.Logger, contentID string) *types.BATormentPartyData {
 	url := PartyDataBaseURL + "/" + contentID + ".json"
-	data, err := fetchPartyData(url)
+	data, err := fetchPartyData(log, url)
 	if err != nil {
-		ui.Log.Warn("Failed to fetch party data", logger.F("contentID", contentID), logger.F("error", err))
+		log.Warn("Failed to fetch party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
 		return nil
 	}
 
 	var partyData types.BATormentPartyData
 	if err := json.Unmarshal(data, &partyData); err != nil {
-		ui.Log.Warn("Failed to parse party data", logger.F("contentID", contentID), logger.F("error", err))
+		log.Warn("Failed to parse party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
 		return nil
 	}
 
-	ui.Log.Info("Downloaded party data", logger.F("contentID", contentID), logger.F("parties", len(partyData.PartyDetail)))
+	log.Info("Downloaded party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "parties", Value: len(partyData.PartyDetail)})
 	return &partyData
 }
 
 // DownloadAllPartyData downloads party data for all content IDs
-func DownloadAllPartyData(contentIDs []string) map[string]*types.BATormentPartyData {
+func DownloadAllPartyData(log logger.Logger, contentIDs []string) map[string]*types.BATormentPartyData {
 	result := make(map[string]*types.BATormentPartyData)
 
 	for _, contentID := range contentIDs {
 		url := PartyDataBaseURL + "/" + contentID + ".json"
-		data, err := fetchPartyData(url)
+		data, err := fetchPartyData(log, url)
 		if err != nil {
-			ui.Log.Warn("Failed to fetch party data", logger.F("contentID", contentID), logger.F("error", err))
+			log.Warn("Failed to fetch party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
 
 		var partyData types.BATormentPartyData
 		if err := json.Unmarshal(data, &partyData); err != nil {
-			ui.Log.Warn("Failed to parse party data", logger.F("contentID", contentID), logger.F("error", err))
+			log.Warn("Failed to parse party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
 
 		result[contentID] = &partyData
-		ui.Log.Info("Downloaded party data", logger.F("contentID", contentID), logger.F("parties", len(partyData.PartyDetail)))
+		log.Info("Downloaded party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "parties", Value: len(partyData.PartyDetail)})
 	}
 
 	return result
 }
 
 // fetchPartyData fetches party data from URL (non-fatal on error)
-func fetchPartyData(url string) ([]byte, error) {
+func fetchPartyData(log logger.Logger, url string) ([]byte, error) {
 	start := time.Now()
 	resp, err := http.Get(url)
 	if err != nil {
@@ -77,7 +76,7 @@ func fetchPartyData(url string) ([]byte, error) {
 		return nil, err
 	}
 
-	ui.Log.Info("Fetched", logger.F("url", url), logger.F("duration", time.Since(start)))
+	log.Info("Fetched", logger.Field{Key: "url", Value: url}, logger.Field{Key: "duration", Value: time.Since(start)})
 	return body, nil
 }
 
@@ -92,23 +91,23 @@ func (e *httpError) Error() string {
 
 // RunTotalAnalysis runs the complete analysis
 // sortedContentIDs provides the order for raidAnalyses (sorted by start_date)
-func RunTotalAnalysis(partyDataMap map[string]*types.BATormentPartyData, sortedContentIDs []string) *types.TotalAnalysisOutput {
-	ui.Log.Info("Starting total analysis", logger.F("raids", len(partyDataMap)))
+func RunTotalAnalysis(log logger.Logger, partyDataMap map[string]*types.BATormentPartyData, sortedContentIDs []string) *types.TotalAnalysisOutput {
+	log.Info("Starting total analysis", logger.Field{Key: "raids", Value: len(partyDataMap)})
 
 	// Raid analysis
-	ui.Log.Info("Running raid analyses...")
+	log.Info("Running raid analyses...")
 	raidAnalyses := RunRaidAnalyses(partyDataMap, sortedContentIDs)
-	ui.Log.Info("Completed raid analyses", logger.F("raids", len(raidAnalyses)))
+	log.Info("Completed raid analyses", logger.Field{Key: "raids", Value: len(raidAnalyses)})
 
 	// Character analysis
-	ui.Log.Info("Running character analyses...")
+	log.Info("Running character analyses...")
 	characterAnalyses := RunCharacterAnalyses(partyDataMap, sortedContentIDs)
-	ui.Log.Info("Completed character analyses", logger.F("characters", len(characterAnalyses)))
+	log.Info("Completed character analyses", logger.Field{Key: "characters", Value: len(characterAnalyses)})
 
 	// Calculate and assign overall rankings
-	ui.Log.Info("Calculating overall rankings...")
+	log.Info("Calculating overall rankings...")
 	AssignOverallRankings(characterAnalyses)
-	ui.Log.Info("Completed overall ranking calculation")
+	log.Info("Completed overall ranking calculation")
 
 	return &types.TotalAnalysisOutput{
 		GeneratedAt:       time.Now().Format(time.RFC3339),
