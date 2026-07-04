@@ -94,7 +94,6 @@ type VideoAnalysisListResponse struct {
 
 // YoutubeAnalysisResult represents the analysis_result JSONB field in youtube_analysis table
 type YoutubeAnalysisResult struct {
-	Score       int      `json:"score"`
-	PartyData   [][6]int `json:"partyData"`
-	SkillOrders []any    `json:"skillOrders"`
+	Score     int      `json:"score"`
+	PartyData [][6]int `json:"partyData"`
 }
