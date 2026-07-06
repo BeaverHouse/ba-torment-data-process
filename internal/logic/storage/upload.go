@@ -66,8 +66,6 @@ func UploadFile(log logger.Logger, path string, fileName string, data []byte, dr
 		return constants.ErrDataEncode(fileName, err)
 	}
 	writer.WriteField("upload_path", path)
-	// keep_filename: later GETs of `<path>/<fileName>` need the verbatim key
-	// (was the dedicated /files/upload/raw route before the surface converged).
 	writer.WriteField("keep_filename", "true")
 	writer.Close()
 
