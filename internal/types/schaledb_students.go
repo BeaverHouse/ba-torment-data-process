@@ -53,6 +53,15 @@ type StudentData struct {
 	IsReleased   []bool   `json:"IsReleased"`   // [JP, Global, CN] 서버별 출시 여부
 	DefaultOrder int      `json:"DefaultOrder"` // 출시 순서 (높을수록 신캐)
 
+	// Skill level-up materials: item IDs and amounts per level step.
+	// EX uses SkillExMaterial (lv2-5), the other three skills share
+	// SkillMaterial (lv2-9). PotentialMaterial is the potential-unlock item.
+	SkillMaterial         [][]int `json:"SkillMaterial,omitempty"`
+	SkillMaterialAmount   [][]int `json:"SkillMaterialAmount,omitempty"`
+	SkillExMaterial       [][]int `json:"SkillExMaterial,omitempty"`
+	SkillExMaterialAmount [][]int `json:"SkillExMaterialAmount,omitempty"`
+	PotentialMaterial     int     `json:"PotentialMaterial,omitempty"`
+
 	// Favor System
 	FavorStatType       []string `json:"FavorStatType"`
 	FavorStatValue      [][]int  `json:"FavorStatValue"`
@@ -71,6 +80,7 @@ type StudentData struct {
 
 // Skills structure
 type StudentSkills struct {
+	Normal        *StudentSkill `json:"Normal,omitempty"`
 	Ex            *StudentSkill `json:"Ex,omitempty"`
 	Passive       *StudentSkill `json:"Passive,omitempty"`
 	ExtraPassive  *StudentSkill `json:"ExtraPassive,omitempty"`
@@ -79,25 +89,39 @@ type StudentSkills struct {
 	WeaponPassive *StudentSkill `json:"WeaponPassive,omitempty"`
 }
 
-// Individual skill
+// Individual skill. Name locales are injected from the jp/en/zh SchaleDB
+// datasets after parsing; Parameters keeps the raw per-level values so
+// downstream consumers can reason about level breakpoints, while Desc bakes
+// in the max-level values only.
 type StudentSkill struct {
+	Name        string        `json:"Name,omitempty"`
+	NameJa      string        `json:"NameJa,omitempty"`
+	NameEn      string        `json:"NameEn,omitempty"`
+	NameZh      string        `json:"NameZh,omitempty"`
 	Cost        []int         `json:"Cost,omitempty"`
 	Desc        string        `json:"Desc"`
+	Parameters  [][]string    `json:"Parameters,omitempty"`
+	Duration    int           `json:"Duration,omitempty"`
+	Range       int           `json:"Range,omitempty"`
 	Effects     []SkillEffect `json:"Effects"`
 	ExtraSkills []ExtraSkill  `json:"ExtraSkills,omitempty"`
 }
 
 // Extra skill for selectable EX skills
 type ExtraSkill struct {
-	Id       string        `json:"Id"`
-	Name     string        `json:"Name"`
-	Desc     string        `json:"Desc"`
-	Cost     []int         `json:"Cost,omitempty"`
-	Duration int           `json:"Duration,omitempty"`
-	Range    int           `json:"Range,omitempty"`
-	Icon     string        `json:"Icon,omitempty"`
-	Effects  []SkillEffect `json:"Effects"`
-	Radius   []any         `json:"Radius,omitempty"`
+	Id         string        `json:"Id"`
+	Name       string        `json:"Name"`
+	NameJa     string        `json:"NameJa,omitempty"`
+	NameEn     string        `json:"NameEn,omitempty"`
+	NameZh     string        `json:"NameZh,omitempty"`
+	Desc       string        `json:"Desc"`
+	Parameters [][]string    `json:"Parameters,omitempty"`
+	Cost       []int         `json:"Cost,omitempty"`
+	Duration   int           `json:"Duration,omitempty"`
+	Range      int           `json:"Range,omitempty"`
+	Icon       string        `json:"Icon,omitempty"`
+	Effects    []SkillEffect `json:"Effects"`
+	Radius     []any         `json:"Radius,omitempty"`
 }
 
 // Skill effect
@@ -137,6 +161,9 @@ type TargetHpRateModifier struct {
 // Student weapon
 type StudentWeapon struct {
 	Name            string `json:"Name"`
+	NameJa          string `json:"NameJa,omitempty"`
+	NameEn          string `json:"NameEn,omitempty"`
+	NameZh          string `json:"NameZh,omitempty"`
 	Desc            string `json:"Desc"`
 	AdaptationType  string `json:"AdaptationType"`
 	AdaptationValue int    `json:"AdaptationValue"`
@@ -152,6 +179,10 @@ type StudentWeapon struct {
 // Student gear
 type StudentGear struct {
 	Name      string   `json:"Name"`
+	NameJa    string   `json:"NameJa,omitempty"`
+	NameEn    string   `json:"NameEn,omitempty"`
+	NameZh    string   `json:"NameZh,omitempty"`
+	Desc      string   `json:"Desc,omitempty"`
 	StatType  []string `json:"StatType"`
 	StatValue [][]int  `json:"StatValue"`
 }

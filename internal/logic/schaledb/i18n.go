@@ -17,6 +17,70 @@ type localizationRaw struct {
 	Club   map[string]string `json:"Club"`
 }
 
+// itemName is the subset of items.json needed to resolve material IDs
+// (students.detail stores skill materials as bare IDs).
+type itemName struct {
+	Id       int    `json:"Id"`
+	Name     string `json:"Name"`
+	Category string `json:"Category"`
+}
+
+func loadItemNames(log logger.Logger, lang string) (map[string]itemName, error) {
+	url := constants.SchaleDBURL + "data/" + lang + "/items.min.json"
+	byteValue, err := storage.GetDataFromURL(log, url)
+	if err != nil {
+		return nil, constants.ErrDataFetch("items ("+lang+")", err)
+	}
+
+	var data map[string]itemName
+	if err := json.Unmarshal(byteValue, &data); err != nil {
+		return nil, constants.ErrDataDecode("items ("+lang+")", err)
+	}
+
+	return data, nil
+}
+
+// saveMaterialNames stores Material item names under the "item" i18n category
+// so consumers can turn skill-material IDs into names without fetching
+// SchaleDB. Non-kr locales are best-effort.
+func saveMaterialNames(ctx context.Context, log logger.Logger, db *postgres.Queries) error {
+	kr, err := loadItemNames(log, "kr")
+	if err != nil {
+		return err
+	}
+	locales := map[string]map[string]itemName{}
+	for _, lang := range []string{"jp", "en", "zh"} {
+		items, err := loadItemNames(log, lang)
+		if err != nil {
+			log.Warn("Failed to load item names (non-fatal)", logger.Field{Key: "lang", Value: lang}, logger.Field{Key: "error", Value: err})
+			items = map[string]itemName{}
+		}
+		locales[lang] = items
+	}
+
+	saved := 0
+	for key, item := range kr {
+		if item.Category != "Material" {
+			continue
+		}
+		err := db.UpsertI18n(ctx, postgres.UpsertI18nParams{
+			Category: "item",
+			Key:      key,
+			NameKo:   item.Name,
+			NameJa:   locales["jp"][key].Name,
+			NameEn:   locales["en"][key].Name,
+			NameZh:   locales["zh"][key].Name,
+		})
+		if err != nil {
+			return errorhandle.ErrDBOperation("upsert i18n item", err)
+		}
+		saved++
+	}
+	log.Info("Saved i18n materials", logger.Field{Key: "count", Value: saved})
+
+	return nil
+}
+
 func loadLocalizationFull(log logger.Logger, lang string) (*localizationRaw, error) {
 	url := constants.SchaleDBURL + "data/" + lang + "/localization.min.json"
 	byteValue, err := storage.GetDataFromURL(log, url)
@@ -88,5 +152,5 @@ func SaveI18nData(log logger.Logger, db *postgres.Queries) error {
 		log.Info("Saved i18n club", logger.Field{Key: "key", Value: key})
 	}
 
-	return nil
+	return saveMaterialNames(ctx, log, db)
 }

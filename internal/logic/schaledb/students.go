@@ -41,9 +41,23 @@ type LocalizationRawData struct {
 	BuffName map[string]string `json:"BuffName"`
 }
 
+// LocaleNamed carries only the localized display name of a nested object.
+type LocaleNamed struct {
+	Name string `json:"Name"`
+}
+
+// LocaleSkill carries the localized skill name plus selectable-EX sub names.
+type LocaleSkill struct {
+	Name        string        `json:"Name"`
+	ExtraSkills []LocaleNamed `json:"ExtraSkills"`
+}
+
 type JapaneseStudentInfo struct {
-	Name       string   `json:"Name"`
-	SearchTags []string `json:"SearchTags"`
+	Name       string                 `json:"Name"`
+	SearchTags []string               `json:"SearchTags"`
+	Skills     map[string]LocaleSkill `json:"Skills"`
+	Weapon     LocaleNamed            `json:"Weapon"`
+	Gear       LocaleNamed            `json:"Gear"`
 }
 
 // loadStudentNames returns map[studentID] = {Name, SearchTags} for any
@@ -93,41 +107,31 @@ func loadJapaneseStudentInfo(log logger.Logger) (map[string]JapaneseStudentInfo,
 	return studentData, nil
 }
 
-// replaceBuffTags replaces <b:> and <d:> tags in skill descriptions with Korean names
+// replaceTaggedName resolves a single <x:TAG> occurrence by trying each
+// prefix against the localization BuffName map. Returns the original match
+// when nothing resolves, so an unknown tag is visible rather than silently
+// dropped.
+func replaceTaggedName(desc, marker string, prefixes []string, buffNames map[string]string) string {
+	re := regexp.MustCompile(`<` + marker + `:([^>]+)>`)
+	return re.ReplaceAllStringFunc(desc, func(match string) string {
+		tag := strings.TrimPrefix(strings.TrimSuffix(match, ">"), "<"+marker+":")
+		for _, prefix := range prefixes {
+			if value, exists := buffNames[prefix+tag]; exists {
+				return value
+			}
+		}
+		return match
+	})
+}
+
+// replaceBuffTags resolves the buff/debuff/special-stack tags SchaleDB leaves
+// in skill descriptions into their localized proper nouns.
 func replaceBuffTags(desc string, buffNames map[string]string) string {
-	// Handle <b:SOMETHING> tags
-	bRegex := regexp.MustCompile(`<b:([^>]+)>`)
-	desc = bRegex.ReplaceAllStringFunc(desc, func(match string) string {
-		// Extract SOMETHING part
-		tag := strings.TrimPrefix(strings.TrimSuffix(match, ">"), "<b:")
-
-		// Find Buff_SOMETHING or Special_SOMETHING
-		for _, prefix := range []string{"Buff_", "Special_", "CC_"} {
-			if value, exists := buffNames[prefix+tag]; exists {
-				return value
-			}
-		}
-
-		// Return original if not found
-		return match
-	})
-
-	// Handle <d:SOMEOTHERTHING> tags
-	dRegex := regexp.MustCompile(`<d:([^>]+)>`)
-	desc = dRegex.ReplaceAllStringFunc(desc, func(match string) string {
-		// Extract SOMEOTHERTHING part
-		tag := strings.TrimPrefix(strings.TrimSuffix(match, ">"), "<d:")
-
-		// Find Debuff_SOMEOTHERTHING or Special_SOMEOTHERTHING
-		for _, prefix := range []string{"Debuff_", "Special_", "CC_"} {
-			if value, exists := buffNames[prefix+tag]; exists {
-				return value
-			}
-		}
-
-		// Return original if not found
-		return match
-	})
+	// <s:TAG> marks per-character special stacks (e.g. 카요코(새해)의 부적).
+	// Without this the raw tag reaches the LLM and the proper noun is lost.
+	desc = replaceTaggedName(desc, "s", []string{"Special_", "Buff_", "CC_"}, buffNames)
+	desc = replaceTaggedName(desc, "b", []string{"Buff_", "Special_", "CC_"}, buffNames)
+	desc = replaceTaggedName(desc, "d", []string{"Debuff_", "Special_", "CC_"}, buffNames)
 
 	return desc
 }
@@ -229,6 +233,51 @@ func processSkillDesc(skillMap map[string]any, buffNames map[string]string) {
 	}
 }
 
+// skillSlots maps SchaleDB skill keys to their typed slots so locale names
+// can be injected by key.
+func skillSlots(s *types.StudentSkills) map[string]*types.StudentSkill {
+	return map[string]*types.StudentSkill{
+		"Normal":        s.Normal,
+		"Ex":            s.Ex,
+		"Public":        s.Public,
+		"GearPublic":    s.GearPublic,
+		"Passive":       s.Passive,
+		"WeaponPassive": s.WeaponPassive,
+		"ExtraPassive":  s.ExtraPassive,
+	}
+}
+
+// injectLocaleNames fills NameJa/NameEn/NameZh on skills, weapon, and gear
+// from the per-locale SchaleDB datasets. Missing locales leave fields empty —
+// consumers fall back to the Korean Name.
+func injectLocaleNames(data *types.StudentData, ja, en, zh JapaneseStudentInfo) {
+	for key, skill := range skillSlots(&data.Skills) {
+		if skill == nil {
+			continue
+		}
+		skill.NameJa = ja.Skills[key].Name
+		skill.NameEn = en.Skills[key].Name
+		skill.NameZh = zh.Skills[key].Name
+		for i := range skill.ExtraSkills {
+			if i < len(ja.Skills[key].ExtraSkills) {
+				skill.ExtraSkills[i].NameJa = ja.Skills[key].ExtraSkills[i].Name
+			}
+			if i < len(en.Skills[key].ExtraSkills) {
+				skill.ExtraSkills[i].NameEn = en.Skills[key].ExtraSkills[i].Name
+			}
+			if i < len(zh.Skills[key].ExtraSkills) {
+				skill.ExtraSkills[i].NameZh = zh.Skills[key].ExtraSkills[i].Name
+			}
+		}
+	}
+	data.Weapon.NameJa = ja.Weapon.Name
+	data.Weapon.NameEn = en.Weapon.Name
+	data.Weapon.NameZh = zh.Weapon.Name
+	data.Gear.NameJa = ja.Gear.Name
+	data.Gear.NameEn = en.Gear.Name
+	data.Gear.NameZh = zh.Gear.Name
+}
+
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]*types.StudentData, error) {
 
@@ -317,6 +366,7 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 			log.Warn("Failed to unmarshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
+		injectLocaleNames(&completeData, japaneseStudentInfo[studentID], englishStudentInfo[studentID], chineseStudentInfo[studentID])
 		studentIDInt64, err := strconv.ParseInt(studentID, 10, 32)
 		if err != nil {
 			log.Warn("Failed to convert student ID to int", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
