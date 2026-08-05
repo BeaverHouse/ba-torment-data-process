@@ -91,22 +91,6 @@ func loadLocalization(log logger.Logger, lang string) (map[string]string, error)
 	return locData.BuffName, nil
 }
 
-// Reads /data/jp/students.json file and returns Japanese student info map.
-// This is used to get student names in Japanese.
-func loadJapaneseStudentInfo(log logger.Logger) (map[string]JapaneseStudentInfo, error) {
-	byteValue, err := storage.GetDataFromURL(log, constants.SchaleDBURL+"/data/jp/students.json")
-	if err != nil {
-		return nil, constants.ErrDataFetch("japanese student info", err)
-	}
-
-	var studentData map[string]JapaneseStudentInfo
-	if err := json.Unmarshal(byteValue, &studentData); err != nil {
-		return nil, constants.ErrDataDecode("japanese student info", err)
-	}
-
-	return studentData, nil
-}
-
 // replaceTaggedName resolves a single <x:TAG> occurrence by trying each
 // prefix against the localization BuffName map. Returns the original match
 // when nothing resolves, so an unknown tag is visible rather than silently
@@ -247,18 +231,20 @@ func skillSlots(s *types.StudentSkills) map[string]*types.StudentSkill {
 	}
 }
 
-// injectLocaleNames fills NameJa/NameEn/NameZh on skills, weapon, and gear
-// from the per-locale SchaleDB datasets. Missing locales leave fields empty —
-// consumers fall back to the Korean Name.
-func injectLocaleNames(data *types.StudentData, ja, en, zh JapaneseStudentInfo) {
+// injectLocaleNames keeps the Japanese dataset as the structural source while
+// taking every display name from its exact locale dataset.
+func injectLocaleNames(data *types.StudentData, ko, ja, en, zh JapaneseStudentInfo) {
+	data.Name = ko.Name
 	for key, skill := range skillSlots(&data.Skills) {
 		if skill == nil {
 			continue
 		}
+		skill.Name = ko.Skills[key].Name
 		skill.NameJa = ja.Skills[key].Name
 		skill.NameEn = en.Skills[key].Name
 		skill.NameZh = zh.Skills[key].Name
 		for i := range skill.ExtraSkills {
+			skill.ExtraSkills[i].Name = ko.Skills[key].ExtraSkills[i].Name
 			if i < len(ja.Skills[key].ExtraSkills) {
 				skill.ExtraSkills[i].NameJa = ja.Skills[key].ExtraSkills[i].Name
 			}
@@ -270,46 +256,93 @@ func injectLocaleNames(data *types.StudentData, ja, en, zh JapaneseStudentInfo) 
 			}
 		}
 	}
+	data.Weapon.Name = ko.Weapon.Name
 	data.Weapon.NameJa = ja.Weapon.Name
 	data.Weapon.NameEn = en.Weapon.Name
 	data.Weapon.NameZh = zh.Weapon.Name
+	data.Gear.Name = ko.Gear.Name
 	data.Gear.NameJa = ja.Gear.Name
 	data.Gear.NameEn = en.Gear.Name
 	data.Gear.NameZh = zh.Gear.Name
 }
 
+func validateStudentLocales(roster map[string]any, locales map[string]map[string]JapaneseStudentInfo) error {
+	for lang, students := range locales {
+		if len(students) != len(roster) {
+			return constants.ErrStudentLocalesInvalid(fmt.Sprintf("student locale %s has %d entries, want %d", lang, len(students), len(roster)))
+		}
+		for studentID := range roster {
+			student, exists := students[studentID]
+			if !exists || strings.TrimSpace(student.Name) == "" {
+				return constants.ErrStudentLocalesInvalid(fmt.Sprintf("student locale %s is missing name for %s", lang, studentID))
+			}
+
+			japanese := locales["jp"][studentID]
+			for key, japaneseSkill := range japanese.Skills {
+				localizedSkill := student.Skills[key]
+				if japaneseSkill.Name != "" && strings.TrimSpace(localizedSkill.Name) == "" {
+					return constants.ErrStudentLocalesInvalid(fmt.Sprintf("student locale %s is missing skill name for %s/%s", lang, studentID, key))
+				}
+				if len(localizedSkill.ExtraSkills) != len(japaneseSkill.ExtraSkills) {
+					return constants.ErrStudentLocalesInvalid(fmt.Sprintf("student locale %s has mismatched extra skills for %s/%s", lang, studentID, key))
+				}
+				for i, extraSkill := range japaneseSkill.ExtraSkills {
+					if extraSkill.Name != "" && strings.TrimSpace(localizedSkill.ExtraSkills[i].Name) == "" {
+						return constants.ErrStudentLocalesInvalid(fmt.Sprintf("student locale %s is missing extra skill name for %s/%s/%d", lang, studentID, key, i))
+					}
+				}
+			}
+			if japanese.Weapon.Name != "" && strings.TrimSpace(student.Weapon.Name) == "" {
+				return constants.ErrStudentLocalesInvalid(fmt.Sprintf("student locale %s is missing weapon name for %s", lang, studentID))
+			}
+			if japanese.Gear.Name != "" && strings.TrimSpace(student.Gear.Name) == "" {
+				return constants.ErrStudentLocalesInvalid(fmt.Sprintf("student locale %s is missing gear name for %s", lang, studentID))
+			}
+		}
+	}
+	return nil
+}
+
 // ParseSchaleDBStudents parses SchaleDB data and returns processed student data
 func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]*types.StudentData, error) {
-
-	byteValue, err := storage.GetDataFromURL(log, constants.SchaleDBURL+"/data/kr/students.json")
+	japaneseBytes, err := storage.GetDataFromURL(log, constants.SchaleDBURL+"/data/jp/students.json")
 	if err != nil {
-		return nil, constants.ErrDataFetch("students", err)
+		return nil, constants.ErrDataFetch("japanese students", err)
+	}
+	var japaneseRawData map[string]any
+	if err := json.Unmarshal(japaneseBytes, &japaneseRawData); err != nil {
+		return nil, constants.ErrDataDecode("japanese students", err)
 	}
 
-	var rawData map[string]any
-	if err := json.Unmarshal(byteValue, &rawData); err != nil {
-		return nil, constants.ErrDataDecode("students", err)
-	}
+	rawData := japaneseRawData
 
 	buffNames, err := loadLocalization(log, "kr")
 	if err != nil {
 		return nil, err
 	}
-	japaneseStudentInfo, err := loadJapaneseStudentInfo(log)
+	koreanStudentInfo, err := loadStudentNames(log, "kr")
 	if err != nil {
 		return nil, err
 	}
-	// FE multi-lang: nameEn / nameZh + extra search tags. Non-fatal if upstream
-	// 404s — we just skip that locale and the FE falls back to ko.
+	japaneseStudentInfo, err := loadStudentNames(log, "jp")
+	if err != nil {
+		return nil, err
+	}
 	englishStudentInfo, err := loadStudentNames(log, "en")
 	if err != nil {
-		log.Warn("Failed to load English student names", logger.Field{Key: "error", Value: err})
-		englishStudentInfo = map[string]JapaneseStudentInfo{}
+		return nil, err
 	}
 	chineseStudentInfo, err := loadStudentNames(log, "zh")
 	if err != nil {
-		log.Warn("Failed to load Chinese student names", logger.Field{Key: "error", Value: err})
-		chineseStudentInfo = map[string]JapaneseStudentInfo{}
+		return nil, err
+	}
+	if err := validateStudentLocales(rawData, map[string]map[string]JapaneseStudentInfo{
+		"kr": koreanStudentInfo,
+		"jp": japaneseStudentInfo,
+		"en": englishStudentInfo,
+		"zh": chineseStudentInfo,
+	}); err != nil {
+		return nil, err
 	}
 
 	zhAliases := loadZhAliases(log)
@@ -366,7 +399,7 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 			log.Warn("Failed to unmarshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
-		injectLocaleNames(&completeData, japaneseStudentInfo[studentID], englishStudentInfo[studentID], chineseStudentInfo[studentID])
+		injectLocaleNames(&completeData, koreanStudentInfo[studentID], japaneseStudentInfo[studentID], englishStudentInfo[studentID], chineseStudentInfo[studentID])
 		studentIDInt64, err := strconv.ParseInt(studentID, 10, 32)
 		if err != nil {
 			log.Warn("Failed to convert student ID to int", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
@@ -380,7 +413,7 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 
 		// Merge search tags across all four locales so LLM keyword search
 		// resolves nicknames and abbreviations regardless of user language.
-		mergedTags := append([]string{}, completeData.SearchTags...)
+		mergedTags := append([]string{}, koreanStudentInfo[studentID].SearchTags...)
 		mergedTags = append(mergedTags, japaneseStudentInfo[studentID].SearchTags...)
 		mergedTags = append(mergedTags, englishStudentInfo[studentID].SearchTags...)
 		mergedTags = append(mergedTags, chineseStudentInfo[studentID].SearchTags...)
@@ -388,7 +421,7 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 
 		db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
 			StudentID:     int32(studentIDInt64),
-			NameKo:        completeData.Name,
+			NameKo:        koreanStudentInfo[studentID].Name,
 			NameJa:        japaneseStudentInfo[studentID].Name,
 			NameEn:        englishStudentInfo[studentID].Name,
 			NameZh:        chineseStudentInfo[studentID].Name,
@@ -415,22 +448,12 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 	// Create student search map with multi-language names and merged search keywords.
 	studentSearchMap := make(map[string]map[string]any)
 	for studentID, studentData := range rawData {
-		dataMap, ok := studentData.(map[string]any)
+		_, ok := studentData.(map[string]any)
 		if !ok {
 			continue
 		}
-		nameKo, exists := dataMap["Name"]
-		if !exists {
-			continue
-		}
-		var koTags []string
-		if tags, ok := dataMap["SearchTags"].([]interface{}); ok {
-			for _, tag := range tags {
-				if s, ok := tag.(string); ok {
-					koTags = append(koTags, s)
-				}
-			}
-		}
+		nameKo := koreanStudentInfo[studentID].Name
+		koTags := koreanStudentInfo[studentID].SearchTags
 		searchKeywords := append([]string{}, koTags...)
 		searchKeywords = append(searchKeywords, japaneseStudentInfo[studentID].SearchTags...)
 		searchKeywords = append(searchKeywords, englishStudentInfo[studentID].SearchTags...)

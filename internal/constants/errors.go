@@ -108,3 +108,9 @@ func ErrNoPointColumns() error {
 	return errorhandle.New(errorhandle.KindFailedPrecondition, "DP_NO_POINT_COLUMNS",
 		"no point columns found for elimination raid")
 }
+
+// ErrStudentLocalesInvalid rejects an incomplete or inconsistent SchaleDB
+// student locale set before any data is written.
+func ErrStudentLocalesInvalid(detail string) error {
+	return errorhandle.New(errorhandle.KindFailedPrecondition, "DP_STUDENT_LOCALES_INVALID", detail)
+}

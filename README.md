@@ -29,9 +29,13 @@
 
 ## Description
 
-[Go](https://go.dev/) repository to update the data of the [BA Torment](https://bluearchive-torment.netlify.app/) website.
+Batch-processing CLI for [BA Torment](https://bluearchive-torment.netlify.app/).
+It imports SchaleDB student data, processes raid party datasets, builds total
+analysis outputs, and generates student grid images.
 
-This repository is currently needs more testing and improvements.
+This is not a long-running backend service. Run the required command as a local
+or cloud job; see the workspace `RUNBOOK.md` and this repository's
+[`docs`](./docs) for the current workflow.
 
 <br>
 
