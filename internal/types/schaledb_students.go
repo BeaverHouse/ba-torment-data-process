@@ -130,7 +130,7 @@ type SkillEffect struct {
 	Restrictions         []SkillRestriction    `json:"Restrictions,omitempty"`
 	Target               []string              `json:"Target,omitempty"`
 	Scale                []int                 `json:"Scale,omitempty"`
-	Value                [][]int               `json:"Value,omitempty"`
+	Value                [][]float64           `json:"Value,omitempty"`
 	AdditionalValue      any                   `json:"AdditionalValue,omitempty"`
 	Stat                 string                `json:"Stat,omitempty"`
 	Duration             int                   `json:"Duration,omitempty"`
