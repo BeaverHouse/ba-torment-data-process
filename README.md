@@ -34,8 +34,7 @@ It imports SchaleDB student data, processes raid party datasets, builds total
 analysis outputs, and generates student grid images.
 
 This is not a long-running backend service. Run the required command as a local
-or cloud job; see the workspace `RUNBOOK.md` and this repository's
-[`docs`](./docs) for the current workflow.
+or cloud job; see this repository's [`docs`](./docs) for the current workflow.
 
 <br>
 
