@@ -27,19 +27,40 @@ func getRunIDsByCompleteRunIDSQL(armorType string, completeRunID int) string {
 SELECT r.runid
 FROM %s r
 WHERE r.crunid = %d
+ORDER BY r.runid
 `, tableName, completeRunID)
 }
 
-func getPartyInfoByRunIDSQL(armorType string, runID int) string {
-	tableName := "students"
-	if armorType != "" {
-		tableName = "students_" + armorType
+func getStudentsTableName(armorType string) string {
+	if armorType == "" {
+		return "students"
+	}
+	return "students_" + armorType
+}
+
+func getPartyInfoByRunIDSQL(armorType string, runID int, hasSkillOrder bool) string {
+	mulliganColumn := "0 AS mulligan"
+	if hasSkillOrder {
+		mulliganColumn = "COALESCE(mulligan, 0) AS mulligan"
 	}
 	return fmt.Sprintf(`
-SELECT sid, build, level, slot, assist
+SELECT sid, build, level, slot, assist, %s
 FROM %s
 WHERE runid = %d
-`, tableName, runID)
+`, mulliganColumn, getStudentsTableName(armorType), runID)
+}
+
+func hasMulliganColumn(db *sql.DB, armorType string) (bool, error) {
+	const query = `
+SELECT EXISTS (
+	SELECT 1
+	FROM information_schema.columns
+	WHERE table_name = ? AND column_name = 'mulligan'
+)`
+
+	var exists bool
+	err := db.QueryRow(query, getStudentsTableName(armorType)).Scan(&exists)
+	return exists, err
 }
 
 func getPlatinumCutSQL(ranks []int) string {

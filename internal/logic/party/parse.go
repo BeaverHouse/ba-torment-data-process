@@ -167,6 +167,11 @@ func removeFraudUsers(log logger.Logger, contentID string, partyData *types.BATo
 }
 
 func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, *types.BATormentFilter, error) {
+	hasSkillOrder, err := hasMulliganColumn(db, armorType)
+	if err != nil {
+		return nil, nil, errorhandle.ErrDBOperation("check starting skill order column", err)
+	}
+
 	completeRunsSQL := getCompleteRunIDAndScoreSQL(armorType)
 	rows, err := db.Query(completeRunsSQL)
 	if err != nil {
@@ -204,7 +209,7 @@ func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, 
 			break
 		}
 
-		partyData, err := getPartiesByCompleteRunID(db, armorType, run.completeRunID)
+		partyData, skillOrders, err := getPartiesByCompleteRunID(db, armorType, run.completeRunID, hasSkillOrder)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -219,9 +224,10 @@ func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, 
 		}
 
 		partyInfo := types.BATormentPartyDetail{
-			Rank:      rank + 1,
-			Score:     run.score,
-			PartyData: partyData,
+			Rank:        rank + 1,
+			Score:       run.score,
+			PartyData:   partyData,
+			SkillOrders: skillOrders,
 		}
 		parties = append(parties, partyInfo)
 
@@ -247,56 +253,69 @@ func processArmorType(db *sql.DB, armorType string) (*types.BATormentPartyData, 
 	return result, filterResult, nil
 }
 
-func getPartiesByCompleteRunID(db *sql.DB, armorType string, completeRunID int) ([][6]int, error) {
+func getPartiesByCompleteRunID(db *sql.DB, armorType string, completeRunID int, hasSkillOrder bool) ([][6]int, [][6]int, error) {
 	runIDsSQL := getRunIDsByCompleteRunIDSQL(armorType, completeRunID)
 	rows, err := db.Query(runIDsSQL)
 	if err != nil {
-		return nil, errorhandle.ErrDBOperation("query run IDs", err)
+		return nil, nil, errorhandle.ErrDBOperation("query run IDs", err)
 	}
 	defer rows.Close()
 
 	var parties [][6]int
+	var skillOrders [][6]int
+	hasAnySkillOrder := false
 
 	for rows.Next() {
 		var runID int
 		if err := rows.Scan(&runID); err != nil {
-			return nil, errorhandle.ErrDBOperation("scan run ID", err)
+			return nil, nil, errorhandle.ErrDBOperation("scan run ID", err)
 		}
 
-		party, err := getPartyByRunID(db, armorType, runID)
+		party, skillOrder, hasRunSkillOrder, err := getPartyByRunID(db, armorType, runID, hasSkillOrder)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		parties = append(parties, party)
+		skillOrders = append(skillOrders, skillOrder)
+		hasAnySkillOrder = hasAnySkillOrder || hasRunSkillOrder
 	}
 
-	return parties, nil
+	if !hasAnySkillOrder {
+		skillOrders = nil
+	}
+
+	return parties, skillOrders, nil
 }
 
-func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
-	partySQL := getPartyInfoByRunIDSQL(armorType, runID)
+func getPartyByRunID(db *sql.DB, armorType string, runID int, hasSkillOrder bool) ([6]int, [6]int, bool, error) {
+	partySQL := getPartyInfoByRunIDSQL(armorType, runID, hasSkillOrder)
 	rows, err := db.Query(partySQL)
 	if err != nil {
-		return [6]int{}, errorhandle.ErrDBOperation("query party info", err)
+		return [6]int{}, [6]int{}, false, errorhandle.ErrDBOperation("query party info", err)
 	}
 	defer rows.Close()
 
 	var partyMembers [6]int
+	var skillOrder [6]int
+	hasAnySkillOrder := false
 	specialIndex := 0
 
 	for rows.Next() {
-		var sid, level, slot int
+		var sid, level, slot, mulligan int
 		var build string
 		var assist bool
 
-		if err := rows.Scan(&sid, &build, &level, &slot, &assist); err != nil {
-			return [6]int{}, errorhandle.ErrDBOperation("scan party info", err)
+		if err := rows.Scan(&sid, &build, &level, &slot, &assist, &mulligan); err != nil {
+			return [6]int{}, [6]int{}, false, errorhandle.ErrDBOperation("scan party info", err)
+		}
+		if mulligan < 0 || mulligan > 5 {
+			return [6]int{}, [6]int{}, false, constants.ErrInvalidSkillOrder(mulligan)
 		}
 
 		weaponValue, exists := constants.WeaponStarMapping[build]
 		if !exists {
-			return [6]int{}, constants.ErrUnknownBuildValue(build)
+			return [6]int{}, [6]int{}, false, constants.ErrUnknownBuildValue(build)
 		}
 
 		star := weaponValue / 10
@@ -304,17 +323,20 @@ func getPartyByRunID(db *sql.DB, armorType string, runID int) ([6]int, error) {
 
 		studentDetailID := id.ComposeStudentDetailID(sid, star, weaponStar, assist)
 
-		if slot <= 3 {
-			partyMembers[slot] = studentDetailID
-		} else {
-			if specialIndex < 2 {
-				partyMembers[4+specialIndex] = studentDetailID
-				specialIndex++
+		memberIndex := slot
+		if slot > 3 {
+			if specialIndex >= 2 {
+				continue
 			}
+			memberIndex = 4 + specialIndex
+			specialIndex++
 		}
+		partyMembers[memberIndex] = studentDetailID
+		skillOrder[memberIndex] = mulligan
+		hasAnySkillOrder = hasAnySkillOrder || mulligan > 0
 	}
 
-	return partyMembers, nil
+	return partyMembers, skillOrder, hasAnySkillOrder, nil
 }
 
 // IsGrandAssault checks if the contentID represents a grand assault

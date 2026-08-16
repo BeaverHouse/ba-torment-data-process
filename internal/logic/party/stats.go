@@ -102,11 +102,12 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUse
 	isInsane := partyData.PartyDetail[0].Score < constants.TormentMinScore
 
 	type userUEData struct {
-		rank       int
-		score      int
-		ueCount    int
-		partyCount int
-		partyData  [][6]int
+		rank        int
+		score       int
+		ueCount     int
+		partyCount  int
+		partyData   [][6]int
+		skillOrders [][6]int
 	}
 
 	var tormentUsers, lunaticUsers []userUEData
@@ -133,11 +134,12 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUse
 		}
 
 		userData := userUEData{
-			rank:       party.Rank,
-			score:      party.Score,
-			ueCount:    ueCount,
-			partyCount: len(party.PartyData),
-			partyData:  party.PartyData,
+			rank:        party.Rank,
+			score:       party.Score,
+			ueCount:     ueCount,
+			partyCount:  len(party.PartyData),
+			partyData:   party.PartyData,
+			skillOrders: party.SkillOrders,
 		}
 
 		if party.Score >= constants.LunaticMinScore {
@@ -162,20 +164,22 @@ func GetMinUEUsers(partyData *types.BATormentPartyData) (torment *types.MinUEUse
 	if len(tormentUsers) > 0 {
 		sortFunc(tormentUsers)
 		torment = &types.MinUEUser{
-			Rank:      tormentUsers[0].rank,
-			Score:     tormentUsers[0].score,
-			UECount:   tormentUsers[0].ueCount,
-			PartyData: tormentUsers[0].partyData,
+			Rank:        tormentUsers[0].rank,
+			Score:       tormentUsers[0].score,
+			UECount:     tormentUsers[0].ueCount,
+			PartyData:   tormentUsers[0].partyData,
+			SkillOrders: tormentUsers[0].skillOrders,
 		}
 	}
 
 	if len(lunaticUsers) > 0 {
 		sortFunc(lunaticUsers)
 		lunatic = &types.MinUEUser{
-			Rank:      lunaticUsers[0].rank,
-			Score:     lunaticUsers[0].score,
-			UECount:   lunaticUsers[0].ueCount,
-			PartyData: lunaticUsers[0].partyData,
+			Rank:        lunaticUsers[0].rank,
+			Score:       lunaticUsers[0].score,
+			UECount:     lunaticUsers[0].ueCount,
+			PartyData:   lunaticUsers[0].partyData,
+			SkillOrders: lunaticUsers[0].skillOrders,
 		}
 	}
 
@@ -203,18 +207,20 @@ func GetMaxPartyUsers(partyData *types.BATormentPartyData) (torment *types.MaxPa
 			if partyCount > lunaticMaxCount {
 				lunaticMaxCount = partyCount
 				lunatic = &types.MaxPartyUser{
-					Rank:      party.Rank,
-					Score:     party.Score,
-					PartyData: party.PartyData,
+					Rank:        party.Rank,
+					Score:       party.Score,
+					PartyData:   party.PartyData,
+					SkillOrders: party.SkillOrders,
 				}
 			}
 		} else if isInsane || party.Score >= constants.TormentMinScore {
 			if partyCount > tormentMaxCount {
 				tormentMaxCount = partyCount
 				torment = &types.MaxPartyUser{
-					Rank:      party.Rank,
-					Score:     party.Score,
-					PartyData: party.PartyData,
+					Rank:        party.Rank,
+					Score:       party.Score,
+					PartyData:   party.PartyData,
+					SkillOrders: party.SkillOrders,
 				}
 			}
 		}

@@ -12,10 +12,11 @@ type BATormentPartyData struct {
 }
 
 type BATormentPartyDetail struct {
-	Rank      int      `json:"rank"`
-	Score     int      `json:"score"`
-	PartyData [][6]int `json:"partyData"`
-	VideoID   *string  `json:"video_id,omitempty"`
+	Rank        int      `json:"rank"`
+	Score       int      `json:"score"`
+	PartyData   [][6]int `json:"partyData"`
+	SkillOrders [][6]int `json:"skillOrders,omitempty"`
+	VideoID     *string  `json:"video_id,omitempty"`
 }
 
 type BATormentSummaryData struct {
@@ -41,17 +42,19 @@ type HighImpactCharacter struct {
 
 // MinUEUser represents a user who cleared with minimum unique equipment usage
 type MinUEUser struct {
-	Rank      int      `json:"rank"`
-	Score     int      `json:"score"`
-	UECount   int      `json:"ueCount"`
-	PartyData [][6]int `json:"partyData"`
+	Rank        int      `json:"rank"`
+	Score       int      `json:"score"`
+	UECount     int      `json:"ueCount"`
+	PartyData   [][6]int `json:"partyData"`
+	SkillOrders [][6]int `json:"skillOrders,omitempty"`
 }
 
 // MaxPartyUser represents a user who cleared with maximum party count
 type MaxPartyUser struct {
-	Rank      int      `json:"rank"`
-	Score     int      `json:"score"`
-	PartyData [][6]int `json:"partyData"`
+	Rank        int      `json:"rank"`
+	Score       int      `json:"score"`
+	PartyData   [][6]int `json:"partyData"`
+	SkillOrders [][6]int `json:"skillOrders,omitempty"`
 }
 
 // PlatinumCut represents a score cutoff at a specific rank
