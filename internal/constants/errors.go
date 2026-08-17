@@ -101,6 +101,12 @@ func ErrUnknownBuildValue(build string) error {
 		fmt.Sprintf("unknown build value: %s", build))
 }
 
+// ErrInvalidSkillOrder is a DuckDB mulligan value outside the supported 0-5 range.
+func ErrInvalidSkillOrder(value int) error {
+	return errorhandle.New(errorhandle.KindInvalid, "DP_INVALID_SKILL_ORDER",
+		fmt.Sprintf("invalid starting skill order: %d", value))
+}
+
 // === KindFailedPrecondition ===
 
 // ErrNoPointColumns is an elimination raid DuckDB with no point columns.
