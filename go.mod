@@ -7,7 +7,6 @@ require (
 	github.com/andybalholm/brotli v1.2.1
 	github.com/fogleman/gg v1.3.0
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/joho/godotenv v1.5.1
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/image v0.42.0
