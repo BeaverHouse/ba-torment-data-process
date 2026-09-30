@@ -9,7 +9,6 @@ It is a single Cobra binary `batorment`; each task is a subcommand.
 2. `process-raid` — turn raw party data (DuckDB) into refined party/filter/summary
    data with verified video references, and upload it to Postgres.
 3. `total-analysis` — aggregate analysis across raids (by assault / by student).
-4. `generate-student-grid-image` — render student grid images (run manually as needed).
 
 Run locally with `go run . <subcommand>` (loads `.env` in the local env).
 
@@ -22,8 +21,6 @@ Run locally with `go run . <subcommand>` (loads `.env` in the local env).
 2) process-raid
 3) total-analysis
 ```
-
-`generate-student-grid-image` is not part of the batch.
 
 ### Build & deploy
 

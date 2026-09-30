@@ -30,8 +30,8 @@
 ## Description
 
 Batch-processing CLI for [BA Torment](https://bluearchive-torment.netlify.app/).
-It imports SchaleDB student data, processes raid party datasets, builds total
-analysis outputs, and generates student grid images.
+It imports SchaleDB student data, processes raid party datasets and builds total
+analysis outputs.
 
 This is not a long-running backend service. Run the required command as a local
 or cloud job; see this repository's [`docs`](./docs) for the current workflow.

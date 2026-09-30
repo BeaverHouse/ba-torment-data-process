@@ -13,7 +13,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "batorment",
 	Short: "Blue Archive torment data processing CLI",
-	Long:  `CLI tool for processing and managing Blue Archive torment raid data (parties, analysis, grid images, etc.).`,
+	Long:  `CLI tool for processing and managing Blue Archive torment raid data (parties, analysis, etc.).`,
 }
 
 func Execute() {
