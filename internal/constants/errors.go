@@ -45,12 +45,6 @@ func ErrUpload(resource string, cause error) error {
 		fmt.Sprintf("failed to upload %s", resource), cause)
 }
 
-// ErrGridGenerate is a failure to generate a student grid image.
-func ErrGridGenerate(fileName string, cause error) error {
-	return errorhandle.Wrap(errorhandle.KindInternal, "DP_GRID_GENERATE_FAILED",
-		fmt.Sprintf("failed to generate grid %s", fileName), cause)
-}
-
 // === KindUnavailable ===
 
 // ErrUpstreamBadStatus is an unexpected non-2xx HTTP status from an upstream

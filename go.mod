@@ -5,18 +5,15 @@ go 1.26.4
 require (
 	github.com/BeaverHouse/go-common v1.0.20260608
 	github.com/andybalholm/brotli v1.2.1
-	github.com/fogleman/gg v1.3.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/image v0.42.0
 )
 
 require (
 	github.com/apache/arrow-go/v18 v18.6.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
-	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
