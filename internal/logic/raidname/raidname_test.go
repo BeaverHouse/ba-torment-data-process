@@ -15,7 +15,10 @@ func TestTranslate(t *testing.T) {
 		{"총력전 S88 시가지 카이텐", LangEN, "Total Assault S88 Street KAITEN FX Mk.0"},
 		{"총력전 S88 시가지 카이텐", LangZH, "总力战 S88 街区 KAITEN FX 0型"},
 		{"총력전 S85 야외 호버크래프트", LangEN, "Total Assault S85 Outdoor Hovercraft"},
-		{"총력전 S89 시가지 드럼바르카", LangZH, "总力战 S89 街区 鼓波卡"},
+
+		// Boss name with a space, as stored in the DB.
+		{"총력전 S89 시가지 드럼통 게", LangEN, "Total Assault S89 Street Drumbarka"},
+		{"총력전 S89 시가지 드럼통 게", LangZH, "总力战 S89 街区 油桶蟹"},
 
 		// Grand Assault with armor + difficulty.
 		{"대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)", LangEN, "Grand Assault S33 Street Kurokage (Elastic Armor, Insane)"},
