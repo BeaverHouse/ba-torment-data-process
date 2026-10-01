@@ -81,13 +81,14 @@ func (q *Queries) ListContentIDsWithStartDate(ctx context.Context) ([]ListConten
 }
 
 const listContentsForRaidList = `-- name: ListContentsForRaidList :many
-SELECT content_id, title, top_level FROM batorment_v3.contents WHERE deleted_at IS NULL ORDER BY start_date ASC
+SELECT content_id, title, top_level, start_date FROM batorment_v3.contents WHERE deleted_at IS NULL ORDER BY start_date ASC
 `
 
 type ListContentsForRaidListRow struct {
-	ContentID string   `json:"content_id"`
-	Title     string   `json:"title"`
-	TopLevel  TopLevel `json:"top_level"`
+	ContentID string             `json:"content_id"`
+	Title     string             `json:"title"`
+	TopLevel  TopLevel           `json:"top_level"`
+	StartDate pgtype.Timestamptz `json:"start_date"`
 }
 
 func (q *Queries) ListContentsForRaidList(ctx context.Context) ([]ListContentsForRaidListRow, error) {
@@ -99,7 +100,12 @@ func (q *Queries) ListContentsForRaidList(ctx context.Context) ([]ListContentsFo
 	items := []ListContentsForRaidListRow{}
 	for rows.Next() {
 		var i ListContentsForRaidListRow
-		if err := rows.Scan(&i.ContentID, &i.Title, &i.TopLevel); err != nil {
+		if err := rows.Scan(
+			&i.ContentID,
+			&i.Title,
+			&i.TopLevel,
+			&i.StartDate,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

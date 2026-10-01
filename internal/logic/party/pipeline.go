@@ -17,13 +17,14 @@ import (
 )
 
 type raidListItem struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"` // legacy = name_ko; FE migrating to per-locale fields below
-	NameKO       string `json:"name_ko"`
-	NameEN       string `json:"name_en"`
-	NameZH       string `json:"name_zh"`
-	TopLevel     string `json:"top_level"`
-	PartyUpdated bool   `json:"party_updated"`
+	ID           string    `json:"id"`
+	Name         string    `json:"name"` // legacy = name_ko; FE migrating to per-locale fields below
+	NameKO       string    `json:"name_ko"`
+	NameEN       string    `json:"name_en"`
+	NameZH       string    `json:"name_zh"`
+	TopLevel     string    `json:"top_level"`
+	PartyUpdated bool      `json:"party_updated"`
+	StartDate    time.Time `json:"start_date"`
 }
 
 // ProcessAllRaids orchestrates the full raid-processing run: it lists raid
@@ -76,6 +77,7 @@ func ProcessAllRaids(log logger.Logger, dryRun bool, recent int) error {
 			NameZH:       raidname.Translate(content.Title, raidname.LangZH),
 			TopLevel:     string(content.TopLevel),
 			PartyUpdated: partyUpdated[content.ContentID],
+			StartDate:    content.StartDate.Time,
 		})
 	}
 
