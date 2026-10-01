@@ -42,7 +42,8 @@ var bosses = map[string]map[Lang]string{
 	"카이텐":    {LangEN: "KAITEN FX Mk.0", LangZH: "KAITEN FX 0型"},
 	"호버크래프트": {LangEN: "Hovercraft", LangZH: "灾厄之狐"},
 	"고즈":     {LangEN: "Goz", LangZH: "戈兹"},
-	"드럼바르카":  {LangEN: "Drum Barca", LangZH: "鼓波卡"},
+	"그레고리오":  {LangEN: "Gregorius", LangZH: "格里高利"},
+	"드럼통 게":  {LangEN: "Drumbarka", LangZH: "油桶蟹"},
 }
 
 var armors = map[string]map[Lang]string{
@@ -60,8 +61,8 @@ var difficulties = map[string]map[Lang]string{
 // Matches "총력전 S88 시가지 카이텐" and
 // "대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)". Trailing parens are optional;
 // whitespace around the comma is tolerated (some DB entries have it, others
-// don't).
-var titleRe = regexp.MustCompile(`^(총력전|대결전)\s+S(\d+)\s+(시가지|야외|실내)\s+(\S+?)\s*(?:\(\s*(\S+?)\s*,\s*(\S+?)\s*\))?\s*$`)
+// don't). Boss names may contain spaces, as in "드럼통 게".
+var titleRe = regexp.MustCompile(`^(총력전|대결전)\s+S(\d+)\s+(시가지|야외|실내)\s+(.+?)\s*(?:\(\s*(\S+?)\s*,\s*(\S+?)\s*\))?\s*$`)
 
 // Translate returns the raid title rendered in lang. For LangKO or any
 // parsing failure, the original koName is returned unchanged so callers
