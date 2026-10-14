@@ -120,6 +120,11 @@ func replaceTaggedName(desc, marker string, prefixes []string, buffNames map[str
 				return value
 			}
 		}
+		// A form tag such as <s:FormChange='잠수'> names the form inline and
+		// has no localization row; the quoted name is the text.
+		if _, quoted, found := strings.Cut(tag, "='"); found {
+			return strings.TrimSuffix(quoted, "'")
+		}
 		return match
 	})
 }
@@ -226,7 +231,13 @@ func processSkillDesc(skillMap map[string]any, buffNames map[string]string) {
 
 					// Replace buff/debuff tags
 					descStr = replaceBuffTags(descStr, buffNames)
-					skillMap["Desc"] = descStr + " (Skill Lv.Max)"
+					// A skill whose text lives in its forms (ExtraSkills) has
+					// an empty Desc; the level marker alone would read as text.
+					if strings.TrimSpace(descStr) == "" {
+						skillMap["Desc"] = ""
+					} else {
+						skillMap["Desc"] = descStr + " (Skill Lv.Max)"
+					}
 				}
 			}
 		}

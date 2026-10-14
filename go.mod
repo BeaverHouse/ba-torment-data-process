@@ -1,6 +1,6 @@
 module ba-torment-data-process
 
-go 1.26.4
+go 1.27.1
 
 require (
 	github.com/BeaverHouse/go-common v1.0.20260608
