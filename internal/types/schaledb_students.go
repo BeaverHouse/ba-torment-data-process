@@ -1,5 +1,7 @@
 package types
 
+import "encoding/json"
+
 // Complete student data structure based on processed SchaleDB data
 type StudentData struct {
 	// Basic Info
@@ -94,38 +96,54 @@ type StudentSkills struct {
 // downstream consumers can reason about level breakpoints, while Desc bakes
 // in the max-level values only.
 type StudentSkill struct {
-	Name        string        `json:"Name,omitempty"`
-	NameJa      string        `json:"NameJa,omitempty"`
-	NameEn      string        `json:"NameEn,omitempty"`
-	NameZh      string        `json:"NameZh,omitempty"`
-	Cost        []int         `json:"Cost,omitempty"`
-	Desc        string        `json:"Desc"`
-	Parameters  [][]string    `json:"Parameters,omitempty"`
-	Duration    int           `json:"Duration,omitempty"`
-	Range       int           `json:"Range,omitempty"`
-	Effects     []SkillEffect `json:"Effects"`
-	ExtraSkills []ExtraSkill  `json:"ExtraSkills,omitempty"`
+	Id          string                 `json:"Id,omitempty"`
+	Type        string                 `json:"Type,omitempty"`
+	Icon        string                 `json:"Icon,omitempty"`
+	Radius      []any                  `json:"Radius,omitempty"`
+	GroupLabel  map[string]EffectLabel `json:"GroupLabel,omitempty"`
+	Name        string                 `json:"Name,omitempty"`
+	NameJa      string                 `json:"NameJa,omitempty"`
+	NameEn      string                 `json:"NameEn,omitempty"`
+	NameZh      string                 `json:"NameZh,omitempty"`
+	Cost        []int                  `json:"Cost,omitempty"`
+	Desc        string                 `json:"Desc"`
+	Parameters  [][]string             `json:"Parameters,omitempty"`
+	Duration    int                    `json:"Duration,omitempty"`
+	Range       int                    `json:"Range,omitempty"`
+	Effects     []SkillEffect          `json:"Effects"`
+	ExtraSkills []ExtraSkill           `json:"ExtraSkills,omitempty"`
 }
 
-// Extra skill for selectable EX skills
-type ExtraSkill struct {
-	Id         string        `json:"Id"`
-	Name       string        `json:"Name"`
-	NameJa     string        `json:"NameJa,omitempty"`
-	NameEn     string        `json:"NameEn,omitempty"`
-	NameZh     string        `json:"NameZh,omitempty"`
-	Desc       string        `json:"Desc"`
-	Parameters [][]string    `json:"Parameters,omitempty"`
-	Cost       []int         `json:"Cost,omitempty"`
-	Duration   int           `json:"Duration,omitempty"`
-	Range      int           `json:"Range,omitempty"`
-	Icon       string        `json:"Icon,omitempty"`
-	Effects    []SkillEffect `json:"Effects"`
-	Radius     []any         `json:"Radius,omitempty"`
+type ExtraSkill = StudentSkill
+
+type EffectLabel struct {
+	Icon            string `json:"Icon,omitempty"`
+	Label           string `json:"Label,omitempty"`
+	LabelTranslated string `json:"LabelTranslated,omitempty"`
+	Disabled        bool   `json:"Disabled,omitempty"`
+}
+
+type EffectCondition struct {
+	Type      string          `json:"Type"`
+	Parameter string          `json:"Parameter"`
+	Operand   string          `json:"Operand"`
+	Value     json.RawMessage `json:"Value"`
 }
 
 // Skill effect
 type SkillEffect struct {
+	CanEvade             *bool                 `json:"CanEvade,omitempty"`
+	ApplyStability       *bool                 `json:"ApplyStability,omitempty"`
+	IgnoreDef            []int                 `json:"IgnoreDef,omitempty"`
+	HitFrames            []int                 `json:"HitFrames,omitempty"`
+	Key                  string                `json:"Key,omitempty"`
+	Channel              int                   `json:"Channel,omitempty"`
+	OverrideSlot         string                `json:"OverrideSlot,omitempty"`
+	Group                int                   `json:"Group,omitempty"`
+	Condition            *EffectCondition      `json:"Condition,omitempty"`
+	StackLabel           []EffectLabel         `json:"StackLabel,omitempty"`
+	StackSame            int                   `json:"StackSame,omitempty"`
+	SourceStat           string                `json:"SourceStat,omitempty"`
 	Type                 string                `json:"Type"`
 	Restrictions         []SkillRestriction    `json:"Restrictions,omitempty"`
 	Target               []string              `json:"Target,omitempty"`
