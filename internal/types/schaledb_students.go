@@ -8,6 +8,9 @@ type StudentData struct {
 	Name         string `json:"Name"`
 	PersonalName string `json:"PersonalName"`
 	FamilyName   string `json:"FamilyName"`
+	FamilyNameJa string `json:"FamilyNameJa,omitempty"`
+	FamilyNameEn string `json:"FamilyNameEn,omitempty"`
+	FamilyNameZh string `json:"FamilyNameZh,omitempty"`
 	DevName      string `json:"DevName"`
 
 	// Character Details
