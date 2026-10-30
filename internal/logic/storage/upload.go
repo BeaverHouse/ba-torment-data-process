@@ -18,10 +18,6 @@ import (
 	"github.com/BeaverHouse/go-common/logger"
 )
 
-var (
-	fileUploadURL = "https://api.tinyclover.com/file-manager/v1"
-)
-
 // MarshalAndUpload marshals data to JSON and uploads it.
 func MarshalAndUpload(log logger.Logger, data any, path, fileName string, dryRun bool, successMsg string) error {
 	var dataBytes []byte
@@ -71,7 +67,7 @@ func UploadFile(log logger.Logger, path string, fileName string, data []byte, dr
 
 	req, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("%s/files/upload", fileUploadURL),
+		fmt.Sprintf("%s/files/upload", env.GetEnv("FILE_MANAGER_URL", "https://api.tinyclover.com/file-manager/v1")),
 		body,
 	)
 	if err != nil {

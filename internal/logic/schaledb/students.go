@@ -54,6 +54,7 @@ type LocaleSkill struct {
 
 type JapaneseStudentInfo struct {
 	Name       string                 `json:"Name"`
+	FamilyName string                 `json:"FamilyName"`
 	SearchTags []string               `json:"SearchTags"`
 	Skills     map[string]LocaleSkill `json:"Skills"`
 	Weapon     LocaleNamed            `json:"Weapon"`
@@ -262,6 +263,9 @@ func skillSlots(s *types.StudentSkills) map[string]*types.StudentSkill {
 // from the per-locale SchaleDB datasets. Missing locales leave fields empty —
 // consumers fall back to the Korean Name.
 func injectLocaleNames(data *types.StudentData, ja, en, zh JapaneseStudentInfo) {
+	data.FamilyNameJa = ja.FamilyName
+	data.FamilyNameEn = en.FamilyName
+	data.FamilyNameZh = zh.FamilyName
 	for key, skill := range skillSlots(&data.Skills) {
 		if skill == nil {
 			continue
