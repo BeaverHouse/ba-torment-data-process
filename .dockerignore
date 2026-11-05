@@ -7,53 +7,28 @@
 *.md
 docs/
 LICENSE
-CONTRIBUTING.md
-SECURITY.md
-CODE_OF_CONDUCT.md
 
-# IDE
+# Development files
 .vscode/
-.idea/
-*.swp
-*.swo
-*~
+.agent-check-result.json
+.agent-cache/
+temp/
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# Build artifacts
-*.exe
-*.dll
-*.so
-*.dylib
-bin/
-dist/
-
-# Test files
-*_test.go
-test/
-tests/
-
-# DuckDB files (downloaded at runtime)
-*.db
-
-# Environment files
-.env
-.env.*
-
-# Temporary files
-tmp/
-temp/
-*.tmp
+# Logs
 *.log
 
-# HAR files
-*.har
+# Environment files (should be mounted or passed as env vars)
+**/.env*
 
-# Node modules (if any)
-node_modules/
+# Test files
+test/
+tests/
+*_test.go
 
-# Coverage
-*.out
-coverage/
+# Build dependencies & artifacts
+dist/
+vendor/
