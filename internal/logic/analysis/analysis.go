@@ -9,10 +9,11 @@ import (
 
 	"ba-torment-data-process/internal/types"
 
+	"github.com/BeaverHouse/go-common/env"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
-const PartyDataBaseURL = "https://twauaebyyujvvvusbrwe.supabase.co/storage/v1/object/public/pb7h4uvn2b6m0lyu7i6r3j8ac/batorment/v3/party"
+var PartyDataBaseURL = env.GetEnv("SUPABASE_PUBLIC_S3_CDN_URL", "https://twauaebyyujvvvusbrwe.supabase.co/storage/v1/object/public/pb7h4uvn2b6m0lyu7i6r3j8ac") + "/batorment/v3/party"
 
 // DownloadPartyData downloads party data for a single content ID, returns nil on failure.
 func DownloadPartyData(log logger.Logger, contentID string) *types.BATormentPartyData {
