@@ -44,6 +44,7 @@ var bosses = map[string]map[Lang]string{
 	"고즈":     {LangEN: "Goz", LangZH: "戈兹"},
 	"그레고리오":  {LangEN: "Gregorius", LangZH: "格里高利"},
 	"드럼통 게":  {LangEN: "Drumbarka", LangZH: "油桶蟹"},
+	"악몽 열차":  {LangEN: "Nightmare Train", LangZH: "噩梦急行"},
 }
 
 var armors = map[string]map[Lang]string{
