@@ -53,7 +53,7 @@ func ProcessAllRaids(log logger.Logger, dryRun bool, recent int) error {
 		contentID := content.ContentID
 		var processErr error
 		if i < recentStart {
-			processErr = processCachedRaid(log, contentID, dryRun)
+			processErr = processCachedRaid(log, queries, contentID, dryRun)
 		} else {
 			processErr = processFullRaid(log, queries, contentID, dryRun)
 		}
@@ -95,7 +95,7 @@ func ProcessAllRaids(log logger.Logger, dryRun bool, recent int) error {
 // Any failure short-circuits and returns an error so the caller can mark the
 // raid as not-updated. Partial uploads may remain in S3, but raids.json will
 // reflect the failure honestly.
-func processCachedRaid(log logger.Logger, contentID string, dryRun bool) error {
+func processCachedRaid(log logger.Logger, queries *postgres.Queries, contentID string, dryRun bool) error {
 	log.Info("Updating video refs only (cached)", logger.Field{Key: "contentID", Value: contentID})
 
 	partyData := analysis.DownloadPartyData(log, contentID)
@@ -103,13 +103,7 @@ func processCachedRaid(log logger.Logger, contentID string, dryRun bool) error {
 		return errorhandle.ErrNotFound(fmt.Sprintf("cached party data for %s", contentID))
 	}
 
-	fileName := fmt.Sprintf("%s.json", contentID)
-
-	if err := refreshVideoRefsAndUpload(log, partyData, contentID, fileName, dryRun); err != nil {
-		return err
-	}
-
-	return nil
+	return refreshVideoRefsAndUpload(log, queries, partyData, contentID, fmt.Sprintf("%s.json", contentID), dryRun)
 }
 
 // processFullRaid runs the full DuckDB-backed pipeline: parse, refresh video
@@ -131,7 +125,7 @@ func processFullRaid(log logger.Logger, queries *postgres.Queries, contentID str
 	fileName := fmt.Sprintf("%s.json", contentID)
 
 	log.Info("[2/6] Updating video references and uploading party + video filter", logger.Field{Key: "contentID", Value: contentID})
-	if err := refreshVideoRefsAndUpload(log, partyData, contentID, fileName, dryRun); err != nil {
+	if err := refreshVideoRefsAndUpload(log, queries, partyData, contentID, fileName, dryRun); err != nil {
 		return err
 	}
 
@@ -169,13 +163,17 @@ func processFullRaid(log logger.Logger, queries *postgres.Queries, contentID str
 
 // refreshVideoRefsAndUpload is the shared step between cached and full
 // pipelines: update video refs in partyData, upload it, then build and upload
-// the video filter. Video-ref update failures are logged but not fatal — the
-// party JSON itself is still authoritative and must succeed.
-func refreshVideoRefsAndUpload(log logger.Logger, partyData *types.BATormentPartyData, contentID, fileName string, dryRun bool) error {
-	updated, err := UpdateVideoRefWithData(log, partyData, contentID)
-	if err != nil {
-		log.Warn("Failed to update video refs", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
-	} else {
+// the video filter. Failing to read the verified videos is logged but not fatal —
+// the party JSON itself is still authoritative and must succeed.
+func refreshVideoRefsAndUpload(log logger.Logger, queries *postgres.Queries, partyData *types.BATormentPartyData, contentID, fileName string, dryRun bool) error {
+	videos, err := queries.GetVerifiedYoutubeAnalysisByRaidID(context.Background(), contentID)
+	switch {
+	case err != nil:
+		log.Warn("Failed to read verified videos", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
+	case len(videos) == 0:
+		log.Info("No verified YouTube analysis found", logger.Field{Key: "contentID", Value: contentID})
+	default:
+		updated := matchVideoRefs(log, partyData, videos)
 		log.Info("Updated video references", logger.Field{Key: "count", Value: updated}, logger.Field{Key: "contentID", Value: contentID})
 	}
 
@@ -183,15 +181,11 @@ func refreshVideoRefsAndUpload(log logger.Logger, partyData *types.BATormentPart
 		return err
 	}
 
-	videoFilter := CreateVideoFilter(log, contentID)
-	if videoFilter == nil {
+	if len(videos) == 0 {
 		log.Warn("No video filter created", logger.Field{Key: "contentID", Value: contentID})
 		return nil
 	}
-	if err := storage.MarshalAndUpload(log, videoFilter, "batorment/v3/video-filter", fileName, dryRun, ""); err != nil {
-		return err
-	}
-	return nil
+	return storage.MarshalAndUpload(log, createVideoFilter(log, contentID, videos), "batorment/v3/video-filter", fileName, dryRun, "")
 }
 
 // annotateSummary fills in the aggregate fields (platinum cuts, essential and

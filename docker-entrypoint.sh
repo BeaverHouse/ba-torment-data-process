@@ -1,4 +1,5 @@
 #!/bin/sh
+# A failing step ends the script with its exit code; set -e stops before the next step.
 set -e
 
 echo "============================================"
@@ -6,38 +7,22 @@ echo "BA Torment Data Processing"
 echo "============================================"
 echo ""
 
-# Step 1: Update SchaleDB data
 echo "[1/3] Updating student data from SchaleDB..."
 echo "--------------------------------------------"
 /app/bin/batorment update-from-schaledb
-if [ $? -eq 0 ]; then
-    echo "✓ SchaleDB update completed successfully"
-else
-    echo "✗ SchaleDB update failed with exit code $?"
-    exit 1
-fi
+echo "✓ SchaleDB update completed successfully"
 
 echo ""
 echo "[2/3] Processing raid data..."
 echo "--------------------------------------------"
 /app/bin/batorment process-raid
-if [ $? -eq 0 ]; then
-    echo "✓ Raid processing completed successfully"
-else
-    echo "✗ Raid processing failed with exit code $?"
-    exit 1
-fi
+echo "✓ Raid processing completed successfully"
 
 echo ""
 echo "[3/3] Running total analysis..."
 echo "--------------------------------------------"
 /app/bin/batorment total-analysis
-if [ $? -eq 0 ]; then
-    echo "✓ Total analysis completed successfully"
-else
-    echo "✗ Total analysis failed with exit code $?"
-    exit 1
-fi
+echo "✓ Total analysis completed successfully"
 
 echo ""
 echo "============================================"

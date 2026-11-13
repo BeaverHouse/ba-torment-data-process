@@ -20,6 +20,10 @@ func TestTranslate(t *testing.T) {
 		{"총력전 S89 시가지 드럼통 게", LangEN, "Total Assault S89 Street Drumbarka"},
 		{"총력전 S89 시가지 드럼통 게", LangZH, "总力战 S89 街区 油桶蟹"},
 
+		// A raid on two terrains; without this, S94's title stays Korean.
+		{"총력전 S94 실내/시가지 악몽 열차", LangEN, "Total Assault S94 Indoor/Street Nightmare Train"},
+		{"총력전 S94 실내/시가지 악몽 열차", LangZH, "总力战 S94 室内/街区 噩梦急行"},
+
 		// Grand Assault with armor + difficulty.
 		{"대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)", LangEN, "Grand Assault S33 Street Kurokage (Elastic Armor, Insane)"},
 		{"대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)", LangZH, "大决战 S33 街区 黑影 (弹力装甲, 疯狂)"},

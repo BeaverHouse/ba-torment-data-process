@@ -294,43 +294,117 @@ func injectLocaleNames(data *types.StudentData, ja, en, zh JapaneseStudentInfo) 
 	data.Gear.NameZh = zh.Gear.Name
 }
 
-// ParseSchaleDBStudents parses SchaleDB data and returns processed student data
-func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]*types.StudentData, error) {
+// The students' names and search tags in the languages beyond Korean.
+type studentLocales struct {
+	ja, en, zh map[string]JapaneseStudentInfo
+	zhAliases  map[string][]string
+}
 
+// The Japanese names are required; English and Chinese are non-fatal if
+// upstream 404s — that locale is skipped and the FE falls back to ko.
+func loadStudentLocales(log logger.Logger) (studentLocales, error) {
+	ja, err := loadJapaneseStudentInfo(log)
+	if err != nil {
+		return studentLocales{}, err
+	}
+	en, err := loadStudentNames(log, "en")
+	if err != nil {
+		log.Warn("Failed to load English student names", logger.Field{Key: "error", Value: err})
+		en = map[string]JapaneseStudentInfo{}
+	}
+	zh, err := loadStudentNames(log, "zh")
+	if err != nil {
+		log.Warn("Failed to load Chinese student names", logger.Field{Key: "error", Value: err})
+		zh = map[string]JapaneseStudentInfo{}
+	}
+	return studentLocales{ja: ja, en: en, zh: zh, zhAliases: loadZhAliases(log)}, nil
+}
+
+// tags merges the search tags of all four locales so LLM keyword search
+// resolves nicknames and abbreviations regardless of user language.
+func (l studentLocales) tags(studentID string, koTags []string) []string {
+	tags := append([]string{}, koTags...)
+	tags = append(tags, l.ja[studentID].SearchTags...)
+	tags = append(tags, l.en[studentID].SearchTags...)
+	tags = append(tags, l.zh[studentID].SearchTags...)
+	return append(tags, l.zhAliases[studentID]...)
+}
+
+// Resolves the effects and descriptions of every skill, selectable EX skills included.
+func processSkills(dataMap map[string]any, buffNames map[string]string) {
+	skillsMap, _ := dataMap["Skills"].(map[string]any)
+	for _, skill := range skillsMap {
+		skillMap, ok := skill.(map[string]any)
+		if !ok {
+			continue
+		}
+		processEffectsSlice(skillMap, "Effects")
+		processSkillDesc(skillMap, buffNames)
+
+		extraSkills, _ := skillMap["ExtraSkills"].([]any)
+		for _, extraSkill := range extraSkills {
+			if extraSkillMap, ok := extraSkill.(map[string]any); ok {
+				processEffectsSlice(extraSkillMap, "Effects")
+				processSkillDesc(extraSkillMap, buffNames)
+			}
+		}
+	}
+}
+
+// The row stored for one student: its processed SchaleDB data with every
+// locale's names. A student whose data cannot be converted is skipped.
+func studentRow(studentID string, dataMap map[string]any, locales studentLocales) (postgres.InsertStudentDataParams, error) {
+	resource := "student " + studentID
+	processedJSON, err := json.Marshal(dataMap)
+	if err != nil {
+		return postgres.InsertStudentDataParams{}, constants.ErrDataEncode(resource, err)
+	}
+	var completeData types.StudentData
+	if err := json.Unmarshal(processedJSON, &completeData); err != nil {
+		return postgres.InsertStudentDataParams{}, constants.ErrDataDecode(resource, err)
+	}
+	injectLocaleNames(&completeData, locales.ja[studentID], locales.en[studentID], locales.zh[studentID])
+	id, err := strconv.ParseInt(studentID, 10, 32)
+	if err != nil {
+		return postgres.InsertStudentDataParams{}, constants.ErrDataDecode(resource, err)
+	}
+	detail, err := json.Marshal(completeData)
+	if err != nil {
+		return postgres.InsertStudentDataParams{}, constants.ErrDataEncode(resource, err)
+	}
+	return postgres.InsertStudentDataParams{
+		StudentID:     int32(id),
+		NameKo:        completeData.Name,
+		NameJa:        locales.ja[studentID].Name,
+		NameEn:        locales.en[studentID].Name,
+		NameZh:        locales.zh[studentID].Name,
+		SearchKeyword: locales.tags(studentID, completeData.SearchTags),
+		Detail:        detail,
+	}, nil
+}
+
+// ParseSchaleDBStudents stores every SchaleDB student with its portrait and
+// uploads the student maps.
+func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) error {
 	byteValue, err := storage.GetDataFromURL(log, constants.SchaleDBURL+"/data/kr/students.json")
 	if err != nil {
-		return nil, constants.ErrDataFetch("students", err)
+		return constants.ErrDataFetch("students", err)
 	}
 
 	var rawData map[string]any
 	if err := json.Unmarshal(byteValue, &rawData); err != nil {
-		return nil, constants.ErrDataDecode("students", err)
+		return constants.ErrDataDecode("students", err)
 	}
 
 	buffNames, err := loadLocalization(log, "kr")
 	if err != nil {
-		return nil, err
+		return err
 	}
-	japaneseStudentInfo, err := loadJapaneseStudentInfo(log)
+	locales, err := loadStudentLocales(log)
 	if err != nil {
-		return nil, err
-	}
-	// FE multi-lang: nameEn / nameZh + extra search tags. Non-fatal if upstream
-	// 404s — we just skip that locale and the FE falls back to ko.
-	englishStudentInfo, err := loadStudentNames(log, "en")
-	if err != nil {
-		log.Warn("Failed to load English student names", logger.Field{Key: "error", Value: err})
-		englishStudentInfo = map[string]JapaneseStudentInfo{}
-	}
-	chineseStudentInfo, err := loadStudentNames(log, "zh")
-	if err != nil {
-		log.Warn("Failed to load Chinese student names", logger.Field{Key: "error", Value: err})
-		chineseStudentInfo = map[string]JapaneseStudentInfo{}
+		return err
 	}
 
-	zhAliases := loadZhAliases(log)
-
-	result := make(map[string]*types.StudentData)
 	studentMap := make(map[string]string)
 
 	for studentID, studentData := range rawData {
@@ -339,99 +413,44 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 			log.Warn("Skipping invalid student data", logger.Field{Key: "studentID", Value: studentID})
 			continue
 		}
+		processSkills(dataMap, buffNames)
 
-		// Process Skills data
-		if skills, ok := dataMap["Skills"]; ok {
-			if skillsMap, ok := skills.(map[string]any); ok {
-				for _, skill := range skillsMap {
-					if skillMap, ok := skill.(map[string]any); ok {
-						// Process Effects
-						processEffectsSlice(skillMap, "Effects")
-
-						// Process Desc and Parameters
-						processSkillDesc(skillMap, buffNames)
-
-						// Process ExtraSkills (for selectable EX skills)
-						if extraSkills, ok := skillMap["ExtraSkills"]; ok {
-							if extraSkillsSlice, ok := extraSkills.([]any); ok {
-								for _, extraSkill := range extraSkillsSlice {
-									if extraSkillMap, ok := extraSkill.(map[string]any); ok {
-										// Process Effects in ExtraSkill
-										processEffectsSlice(extraSkillMap, "Effects")
-										// Process Desc and Parameters in ExtraSkill
-										processSkillDesc(extraSkillMap, buffNames)
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Convert processed map back to CompleteStudentData struct
-		processedJSON, err := json.Marshal(dataMap)
+		row, err := studentRow(studentID, dataMap, locales)
 		if err != nil {
-			log.Warn("Failed to marshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
+			log.Warn("Skipping student", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
 			continue
 		}
-
-		var completeData types.StudentData
-		err = json.Unmarshal(processedJSON, &completeData)
-		if err != nil {
-			log.Warn("Failed to unmarshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
-			continue
-		}
-		injectLocaleNames(&completeData, japaneseStudentInfo[studentID], englishStudentInfo[studentID], chineseStudentInfo[studentID])
-		studentIDInt64, err := strconv.ParseInt(studentID, 10, 32)
-		if err != nil {
-			log.Warn("Failed to convert student ID to int", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
-			continue
-		}
-		completeDataBytes, err := json.Marshal(completeData)
-		if err != nil {
-			log.Warn("Failed to marshal student data", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
-			continue
+		if err := db.InsertStudentData(context.Background(), row); err != nil {
+			return errorhandle.ErrDBOperation("insert student", err)
 		}
 
-		// Merge search tags across all four locales so LLM keyword search
-		// resolves nicknames and abbreviations regardless of user language.
-		mergedTags := append([]string{}, completeData.SearchTags...)
-		mergedTags = append(mergedTags, japaneseStudentInfo[studentID].SearchTags...)
-		mergedTags = append(mergedTags, englishStudentInfo[studentID].SearchTags...)
-		mergedTags = append(mergedTags, chineseStudentInfo[studentID].SearchTags...)
-		mergedTags = append(mergedTags, zhAliases[studentID]...)
-
-		err = db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
-			StudentID:     int32(studentIDInt64),
-			NameKo:        completeData.Name,
-			NameJa:        japaneseStudentInfo[studentID].Name,
-			NameEn:        englishStudentInfo[studentID].Name,
-			NameZh:        chineseStudentInfo[studentID].Name,
-			SearchKeyword: mergedTags,
-			Detail:        completeDataBytes,
-		})
-		if err != nil {
-			return nil, errorhandle.ErrDBOperation("insert student", err)
-		}
-
-		studentMap[studentID] = completeData.Name
+		studentMap[studentID] = row.NameKo
 
 		// Upload image + wait 3 second. Supabase S3 has performance issue when uploading too many files at once.
-		err = uploadCharacterImage(log, int(studentIDInt64), false)
+		err = uploadCharacterImage(log, int(row.StudentID), false)
 		if err != nil {
 			log.Warn("Failed to upload image for student", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "error", Value: err})
-			return nil, err
+			return err
 		}
-		log.Info("Student processed", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "name", Value: completeData.Name})
+		log.Info("Student processed", logger.Field{Key: "studentID", Value: studentID}, logger.Field{Key: "name", Value: row.NameKo})
 	}
 
 	if err := storage.MarshalAndUpload(log, studentMap, "batorment/v3", "student-map.json", false, ""); err != nil {
 		log.Warn("Failed to upload student map", logger.Field{Key: "error", Value: err})
-		return nil, err
+		return err
 	}
 
-	// Create student search map with multi-language names and merged search keywords.
+	if err := storage.MarshalAndUpload(log, searchMap(rawData, locales), "batorment/v3", "student-search-map.json", false, ""); err != nil {
+		log.Warn("Failed to upload student search map", logger.Field{Key: "error", Value: err})
+		return err
+	}
+
+	return nil
+}
+
+// The student search map: every student's names in four languages with the
+// search keywords of all of them.
+func searchMap(rawData map[string]any, locales studentLocales) map[string]map[string]any {
 	studentSearchMap := make(map[string]map[string]any)
 	for studentID, studentData := range rawData {
 		dataMap, ok := studentData.(map[string]any)
@@ -443,33 +462,21 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 			continue
 		}
 		var koTags []string
-		if tags, ok := dataMap["SearchTags"].([]interface{}); ok {
-			for _, tag := range tags {
-				if s, ok := tag.(string); ok {
-					koTags = append(koTags, s)
-				}
+		tags, _ := dataMap["SearchTags"].([]any)
+		for _, tag := range tags {
+			if s, ok := tag.(string); ok {
+				koTags = append(koTags, s)
 			}
 		}
-		searchKeywords := append([]string{}, koTags...)
-		searchKeywords = append(searchKeywords, japaneseStudentInfo[studentID].SearchTags...)
-		searchKeywords = append(searchKeywords, englishStudentInfo[studentID].SearchTags...)
-		searchKeywords = append(searchKeywords, chineseStudentInfo[studentID].SearchTags...)
-		searchKeywords = append(searchKeywords, zhAliases[studentID]...)
 		studentSearchMap[studentID] = map[string]any{
 			"nameKo":         nameKo,
-			"nameJa":         japaneseStudentInfo[studentID].Name,
-			"nameEn":         englishStudentInfo[studentID].Name,
-			"nameZh":         chineseStudentInfo[studentID].Name,
-			"searchKeywords": searchKeywords,
+			"nameJa":         locales.ja[studentID].Name,
+			"nameEn":         locales.en[studentID].Name,
+			"nameZh":         locales.zh[studentID].Name,
+			"searchKeywords": locales.tags(studentID, koTags),
 		}
 	}
-
-	if err := storage.MarshalAndUpload(log, studentSearchMap, "batorment/v3", "student-search-map.json", false, ""); err != nil {
-		log.Warn("Failed to upload student search map", logger.Field{Key: "error", Value: err})
-		return nil, err
-	}
-
-	return result, nil
+	return studentSearchMap
 }
 
 // Uploads the character image from SchaleDB via File Manager API.

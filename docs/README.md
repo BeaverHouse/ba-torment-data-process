@@ -32,6 +32,8 @@ Most of the processed data is uploaded to Supabase Storage, but some data is sto
 
 See [Concept](./concept.md) for the CLI's subcommands, container pipeline, and build/deploy.
 
+See [Refactoring backlog](./refactoring.md) for known weak patterns still in the code.
+
 ## Environment variables
 
 Environment variables are configured in [deploy.yaml](../deploy.yaml).  

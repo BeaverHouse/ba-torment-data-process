@@ -41,21 +41,9 @@ func DownloadAllPartyData(log logger.Logger, contentIDs []string) map[string]*ty
 	result := make(map[string]*types.BATormentPartyData)
 
 	for _, contentID := range contentIDs {
-		url := PartyDataBaseURL + "/" + contentID + ".json"
-		data, err := fetchPartyData(log, url)
-		if err != nil {
-			log.Warn("Failed to fetch party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
-			continue
+		if partyData := DownloadPartyData(log, contentID); partyData != nil {
+			result[contentID] = partyData
 		}
-
-		var partyData types.BATormentPartyData
-		if err := json.Unmarshal(data, &partyData); err != nil {
-			log.Warn("Failed to parse party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "error", Value: err})
-			continue
-		}
-
-		result[contentID] = &partyData
-		log.Info("Downloaded party data", logger.Field{Key: "contentID", Value: contentID}, logger.Field{Key: "parties", Value: len(partyData.PartyDetail)})
 	}
 
 	return result

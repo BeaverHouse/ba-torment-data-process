@@ -1,7 +1,6 @@
 package party
 
 import (
-	"context"
 	"strconv"
 
 	"ba-torment-data-process/internal/constants"
@@ -9,7 +8,6 @@ import (
 	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
 
-	gopostgres "github.com/BeaverHouse/go-common/database/postgres"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
@@ -128,32 +126,15 @@ func createVideoFilterFromPartyTeams(partyTeams [][6]int) *types.BATormentFilter
 	}
 }
 
-// CreateVideoFilter creates a video filter from verified YouTube analysis data in the database
-func CreateVideoFilter(log logger.Logger, raidID string) *types.BATormentFilter {
-	pool := gopostgres.InitFromEnv()
-	defer pool.Close()
-
-	ctx := context.Background()
-	queries := postgres.New(postgres.Bounded(pool))
-
-	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
-	if err != nil {
-		log.Warn("Failed to query YouTube analysis", logger.Field{Key: "raidID", Value: raidID}, logger.Field{Key: "error", Value: err})
-		return nil
-	}
-
-	if len(analysisRows) == 0 {
-		log.Info("No verified YouTube analysis found", logger.Field{Key: "raidID", Value: raidID})
-		return nil
-	}
-
+// createVideoFilter builds the filter of the parties the verified videos show.
+func createVideoFilter(log logger.Logger, raidID string, videos []postgres.GetVerifiedYoutubeAnalysisByRaidIDRow) *types.BATormentFilter {
 	var partyTeams [][6]int
 
-	for _, row := range analysisRows {
-		partyTeams = append(partyTeams, row.AnalysisResult.PartyData...)
+	for _, video := range videos {
+		partyTeams = append(partyTeams, video.AnalysisResult.PartyData...)
 	}
 
-	log.Info("Created video filter", logger.Field{Key: "raidID", Value: raidID}, logger.Field{Key: "partyTeams", Value: len(partyTeams)}, logger.Field{Key: "videos", Value: len(analysisRows)})
+	log.Info("Created video filter", logger.Field{Key: "raidID", Value: raidID}, logger.Field{Key: "partyTeams", Value: len(partyTeams)}, logger.Field{Key: "videos", Value: len(videos)})
 
 	return createVideoFilterFromPartyTeams(partyTeams)
 }

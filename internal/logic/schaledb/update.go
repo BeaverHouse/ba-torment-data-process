@@ -16,11 +16,11 @@ func UpdateFromSchaleDB(log logger.Logger) error {
 
 	queries := postgres.New(postgres.Bounded(pool))
 
-	if _, err := ParseSchaleDBStudents(log, queries); err != nil {
+	if err := ParseSchaleDBStudents(log, queries); err != nil {
 		return err
 	}
 
-	if _, err := ParseSchaleDBPresents(log, queries); err != nil {
+	if err := ParseSchaleDBPresents(log, queries); err != nil {
 		return err
 	}
 
