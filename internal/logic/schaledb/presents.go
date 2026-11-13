@@ -29,10 +29,11 @@ func loadItems(log logger.Logger, lang string) (map[string]types.FavorItem, erro
 	return items, nil
 }
 
-func ParseSchaleDBPresents(log logger.Logger, db *postgres.Queries) (map[string]*types.FavorItem, error) {
+// ParseSchaleDBPresents stores every SchaleDB gift item.
+func ParseSchaleDBPresents(log logger.Logger, db *postgres.Queries) error {
 	items, err := loadItems(log, "kr")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, item := range items {
@@ -44,9 +45,9 @@ func ParseSchaleDBPresents(log logger.Logger, db *postgres.Queries) (map[string]
 			ExpValue:  int32(item.ExpValue),
 		})
 		if err != nil {
-			return nil, errorhandle.ErrDBOperation("insert present", err)
+			return errorhandle.ErrDBOperation("insert present", err)
 		}
 	}
 
-	return nil, nil
+	return nil
 }

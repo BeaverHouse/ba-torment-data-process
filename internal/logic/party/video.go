@@ -1,14 +1,10 @@
 package party
 
 import (
-	"context"
-
 	"ba-torment-data-process/internal/db/postgres"
 	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
 
-	gopostgres "github.com/BeaverHouse/go-common/database/postgres"
-	"github.com/BeaverHouse/go-common/errorhandle"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
@@ -17,39 +13,9 @@ const (
 	hoshinoMusoCodeB = 10099
 )
 
-// UpdateVideoRefWithData updates video references for party data
-func UpdateVideoRefWithData(log logger.Logger, partyData *types.BATormentPartyData, raidID string) (int, error) {
-	pool := gopostgres.InitFromEnv()
-	defer pool.Close()
-
-	ctx := context.Background()
-	queries := postgres.New(postgres.Bounded(pool))
-
-	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
-	if err != nil {
-		return 0, errorhandle.ErrDBOperation("get verified YouTube analysis", err)
-	}
-
-	if len(analysisRows) == 0 {
-		log.Info("No verified YouTube analysis found", logger.Field{Key: "raidID", Value: raidID})
-		return 0, nil
-	}
-
-	analysisResults := make([]types.YoutubeAnalysisResult, 0, len(analysisRows))
-	videoIDMap := make(map[int]string)
-
-	for idx, row := range analysisRows {
-		analysisResults = append(analysisResults, row.AnalysisResult)
-		videoIDMap[idx] = row.VideoID
-	}
-
-	updated := matchAndUpdateVideoRefs(log, partyData, analysisResults, videoIDMap)
-	log.Info("Updated video references", logger.Field{Key: "count", Value: updated}, logger.Field{Key: "raidID", Value: raidID})
-
-	return updated, nil
-}
-
-func matchAndUpdateVideoRefs(log logger.Logger, partyData *types.BATormentPartyData, analysisResults []types.YoutubeAnalysisResult, videoIDMap map[int]string) int {
+// matchVideoRefs points each ranked party at the first unused verified video
+// with its score and parties, and returns how many it matched.
+func matchVideoRefs(log logger.Logger, partyData *types.BATormentPartyData, videos []postgres.GetVerifiedYoutubeAnalysisByRaidIDRow) int {
 	updated := 0
 	usedVideos := make(map[string]bool)
 
@@ -60,14 +26,14 @@ func matchAndUpdateVideoRefs(log logger.Logger, partyData *types.BATormentPartyD
 	for i := range partyData.PartyDetail {
 		party := &partyData.PartyDetail[i]
 
-		for idx, analysis := range analysisResults {
-			videoID := videoIDMap[idx]
+		for _, video := range videos {
+			videoID := video.VideoID
 
 			if usedVideos[videoID] {
 				continue
 			}
 
-			if isMatch(party, &analysis) {
+			if isMatch(party, &video.AnalysisResult) {
 				party.VideoID = &videoID
 				usedVideos[videoID] = true
 				updated++

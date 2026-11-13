@@ -7,6 +7,7 @@ package raidname
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 type Lang string
@@ -59,11 +60,12 @@ var difficulties = map[string]map[Lang]string{
 	"인세인": {LangEN: "Insane", LangZH: "疯狂"},
 }
 
-// Matches "총력전 S88 시가지 카이텐" and
-// "대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)". Trailing parens are optional;
-// whitespace around the comma is tolerated (some DB entries have it, others
-// don't). Boss names may contain spaces, as in "드럼통 게".
-var titleRe = regexp.MustCompile(`^(총력전|대결전)\s+S(\d+)\s+(시가지|야외|실내)\s+(.+?)\s*(?:\(\s*(\S+?)\s*,\s*(\S+?)\s*\))?\s*$`)
+// Matches "총력전 S88 시가지 카이텐", "총력전 S94 실내/시가지 악몽 열차" and
+// "대결전 S33 시가지 쿠로카게 (탄력장갑, 인세인)". A raid fought on several
+// terrains joins them with "/". Trailing parens are optional; whitespace around
+// the comma is tolerated (some DB entries have it, others don't). Boss names may
+// contain spaces, as in "드럼통 게".
+var titleRe = regexp.MustCompile(`^(총력전|대결전)\s+S(\d+)\s+((?:시가지|야외|실내)(?:/(?:시가지|야외|실내))*)\s+(.+?)\s*(?:\(\s*(\S+?)\s*,\s*(\S+?)\s*\))?\s*$`)
 
 // Translate returns the raid title rendered in lang. For LangKO or any
 // parsing failure, the original koName is returned unchanged so callers
@@ -78,39 +80,26 @@ func Translate(koName string, lang Lang) string {
 	}
 	raidType, season, location, boss, armor, difficulty := m[1], m[2], m[3], m[4], m[5], m[6]
 
-	t, ok := pick(raidTypes, raidType, lang)
+	t, ok := raidTypes[raidType][lang]
 	if !ok {
 		return koName
 	}
-	l, _ := pick(locations, location, lang)
-	b, _ := pick(bosses, boss, lang)
-	if l == "" {
-		l = location
-	}
-	if b == "" {
-		b = boss
+	terrains := strings.Split(location, "/")
+	for i, terrain := range terrains {
+		terrains[i] = word(locations, terrain, lang)
 	}
 
-	base := fmt.Sprintf("%s S%s %s %s", t, season, l, b)
+	base := fmt.Sprintf("%s S%s %s %s", t, season, strings.Join(terrains, "/"), word(bosses, boss, lang))
 	if armor == "" {
 		return base
 	}
-	a, _ := pick(armors, armor, lang)
-	d, _ := pick(difficulties, difficulty, lang)
-	if a == "" {
-		a = armor
-	}
-	if d == "" {
-		d = difficulty
-	}
-	return fmt.Sprintf("%s (%s, %s)", base, a, d)
+	return fmt.Sprintf("%s (%s, %s)", base, word(armors, armor, lang), word(difficulties, difficulty, lang))
 }
 
-func pick(m map[string]map[Lang]string, key string, lang Lang) (string, bool) {
-	entry, ok := m[key]
-	if !ok {
-		return "", false
+// The word in lang, or the Korean word itself when the dictionary lacks it.
+func word(dict map[string]map[Lang]string, ko string, lang Lang) string {
+	if w, ok := dict[ko][lang]; ok {
+		return w
 	}
-	v, ok := entry[lang]
-	return v, ok
+	return ko
 }
