@@ -14,7 +14,7 @@ func UpdateFromSchaleDB(log logger.Logger) error {
 	pool := gopostgres.InitFromEnv()
 	defer pool.Close()
 
-	queries := postgres.New(pool)
+	queries := postgres.New(postgres.Bounded(pool))
 
 	if _, err := ParseSchaleDBStudents(log, queries); err != nil {
 		return err

@@ -15,6 +15,7 @@ import (
 	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
 
+	"github.com/BeaverHouse/go-common/errorhandle"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
@@ -401,7 +402,7 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 		mergedTags = append(mergedTags, chineseStudentInfo[studentID].SearchTags...)
 		mergedTags = append(mergedTags, zhAliases[studentID]...)
 
-		db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
+		err = db.InsertStudentData(context.Background(), postgres.InsertStudentDataParams{
 			StudentID:     int32(studentIDInt64),
 			NameKo:        completeData.Name,
 			NameJa:        japaneseStudentInfo[studentID].Name,
@@ -410,6 +411,9 @@ func ParseSchaleDBStudents(log logger.Logger, db *postgres.Queries) (map[string]
 			SearchKeyword: mergedTags,
 			Detail:        completeDataBytes,
 		})
+		if err != nil {
+			return nil, errorhandle.ErrDBOperation("insert student", err)
+		}
 
 		studentMap[studentID] = completeData.Name
 

@@ -77,8 +77,7 @@ func UploadFile(log logger.Logger, path string, fileName string, data []byte, dr
 	req.Header.Set("X-Access-Token", env.GetEnv("BA_ANALYZER_SERVICE_TOKEN", ""))
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return constants.ErrUpload(fileName, err)
 	}

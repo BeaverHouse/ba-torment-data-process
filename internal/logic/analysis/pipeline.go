@@ -19,7 +19,7 @@ func RunTotalAnalysisPipeline(log logger.Logger, dryRun bool) error {
 	pool := gopostgres.InitFromEnv()
 	defer pool.Close()
 
-	queries := postgres.New(pool)
+	queries := postgres.New(postgres.Bounded(pool))
 
 	contents, err := queries.ListContentIDsWithStartDate(context.Background())
 	if err != nil {

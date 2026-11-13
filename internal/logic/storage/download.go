@@ -14,13 +14,17 @@ import (
 
 const maxRetries = 3
 
+// Client is for every upstream request: the default client waits forever on a
+// server that stops answering, which leaves the job running with nothing to do.
+var Client = &http.Client{Timeout: time.Minute}
+
 // GetDataFromURL gets data from URL with retry on transient (5xx) errors.
 func GetDataFromURL(log logger.Logger, url string) ([]byte, error) {
 	start := time.Now()
 
 	var lastErr error
 	for attempt := range maxRetries {
-		resp, err := http.Get(url)
+		resp, err := Client.Get(url)
 		if err != nil {
 			lastErr = errorhandle.ErrInternal(err)
 			if attempt < maxRetries-1 {

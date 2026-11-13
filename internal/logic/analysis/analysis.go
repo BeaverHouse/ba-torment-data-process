@@ -2,11 +2,13 @@ package analysis
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
-	"net/http"
 	"sort"
 	"time"
 
+	"ba-torment-data-process/internal/constants"
+	"ba-torment-data-process/internal/logic/storage"
 	"ba-torment-data-process/internal/types"
 
 	"github.com/BeaverHouse/go-common/env"
@@ -62,14 +64,14 @@ func DownloadAllPartyData(log logger.Logger, contentIDs []string) map[string]*ty
 // fetchPartyData fetches party data from URL (non-fatal on error)
 func fetchPartyData(log logger.Logger, url string) ([]byte, error) {
 	start := time.Now()
-	resp, err := http.Get(url)
+	resp, err := storage.Client.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, &httpError{StatusCode: resp.StatusCode, URL: url}
+		return nil, constants.ErrUpstreamBadStatus(fmt.Sprintf("HTTP %d from %s", resp.StatusCode, url))
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -79,15 +81,6 @@ func fetchPartyData(log logger.Logger, url string) ([]byte, error) {
 
 	log.Info("Fetched", logger.Field{Key: "url", Value: url}, logger.Field{Key: "duration", Value: time.Since(start)})
 	return body, nil
-}
-
-type httpError struct {
-	StatusCode int
-	URL        string
-}
-
-func (e *httpError) Error() string {
-	return "HTTP " + string(rune(e.StatusCode)) + " for " + e.URL
 }
 
 // RunTotalAnalysis runs the complete analysis

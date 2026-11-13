@@ -134,7 +134,7 @@ func CreateVideoFilter(log logger.Logger, raidID string) *types.BATormentFilter 
 	defer pool.Close()
 
 	ctx := context.Background()
-	queries := postgres.New(pool)
+	queries := postgres.New(postgres.Bounded(pool))
 
 	analysisRows, err := queries.GetVerifiedYoutubeAnalysisByRaidID(ctx, raidID)
 	if err != nil {
