@@ -36,7 +36,7 @@ func ProcessAllRaids(log logger.Logger, dryRun bool, recent int) error {
 	pool := gopostgres.InitFromEnv()
 	defer pool.Close()
 
-	queries := postgres.New(pool)
+	queries := postgres.New(postgres.Bounded(pool))
 
 	contents, err := queries.ListContentsForRaidList(context.Background())
 	if err != nil {

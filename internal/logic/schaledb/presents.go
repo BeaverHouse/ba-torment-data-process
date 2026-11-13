@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/BeaverHouse/go-common/errorhandle"
 	"github.com/BeaverHouse/go-common/logger"
 )
 
@@ -35,13 +36,16 @@ func ParseSchaleDBPresents(log logger.Logger, db *postgres.Queries) (map[string]
 	}
 
 	for _, item := range items {
-		db.InsertPresent(context.Background(), postgres.InsertPresentParams{
+		err := db.InsertPresent(context.Background(), postgres.InsertPresentParams{
 			PresentID: int32(item.Id),
 			NameKo:    item.Name,
 			Rarity:    item.Rarity,
 			Tags:      item.Tags,
 			ExpValue:  int32(item.ExpValue),
 		})
+		if err != nil {
+			return nil, errorhandle.ErrDBOperation("insert present", err)
+		}
 	}
 
 	return nil, nil
