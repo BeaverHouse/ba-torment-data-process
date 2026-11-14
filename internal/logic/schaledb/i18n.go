@@ -40,10 +40,20 @@ func loadItemNames(log logger.Logger, lang string) (map[string]itemName, error) 
 	return data, nil
 }
 
-// saveMaterialNames stores Material item names under the "item" i18n category
-// so consumers can turn skill-material IDs into names without fetching
-// SchaleDB. Non-kr locales are best-effort.
-func saveMaterialNames(ctx context.Context, log logger.Logger, db *postgres.Queries) error {
+// favorCategory marks the gift items in items.json.
+const favorCategory = "Favor"
+
+// i18nCategories maps each item category whose names i18n keeps to its i18n category.
+// Skill materials are stored as bare IDs in students.detail, and a present's names
+// are the "present" row whose key is its present_id.
+var i18nCategories = map[string]string{
+	"Material":    "item",
+	favorCategory: "present",
+}
+
+// saveItemNames stores material and gift names in every locale so consumers
+// read them without fetching SchaleDB. Non-kr locales are best-effort.
+func saveItemNames(ctx context.Context, log logger.Logger, db *postgres.Queries) error {
 	kr, err := loadItemNames(log, "kr")
 	if err != nil {
 		return err
@@ -60,11 +70,12 @@ func saveMaterialNames(ctx context.Context, log logger.Logger, db *postgres.Quer
 
 	saved := 0
 	for key, item := range kr {
-		if item.Category != "Material" {
+		category, ok := i18nCategories[item.Category]
+		if !ok {
 			continue
 		}
 		err := db.UpsertI18n(ctx, postgres.UpsertI18nParams{
-			Category: "item",
+			Category: category,
 			Key:      key,
 			NameKo:   item.Name,
 			NameJa:   locales["jp"][key].Name,
@@ -76,7 +87,7 @@ func saveMaterialNames(ctx context.Context, log logger.Logger, db *postgres.Quer
 		}
 		saved++
 	}
-	log.Info("Saved i18n materials", logger.Field{Key: "count", Value: saved})
+	log.Info("Saved i18n items", logger.Field{Key: "count", Value: saved})
 
 	return nil
 }
@@ -152,5 +163,5 @@ func SaveI18nData(log logger.Logger, db *postgres.Queries) error {
 		log.Info("Saved i18n club", logger.Field{Key: "key", Value: key})
 	}
 
-	return saveMaterialNames(ctx, log, db)
+	return saveItemNames(ctx, log, db)
 }

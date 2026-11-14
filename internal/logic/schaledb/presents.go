@@ -37,6 +37,9 @@ func ParseSchaleDBPresents(log logger.Logger, db *postgres.Queries) error {
 	}
 
 	for _, item := range items {
+		if item.Category != favorCategory {
+			continue
+		}
 		err := db.InsertPresent(context.Background(), postgres.InsertPresentParams{
 			PresentID: int32(item.Id),
 			NameKo:    item.Name,
