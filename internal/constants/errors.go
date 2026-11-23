@@ -45,6 +45,13 @@ func ErrUpload(resource string, cause error) error {
 		fmt.Sprintf("failed to upload %s", resource), cause)
 }
 
+// ErrSeedTargetNotLocal refuses to overwrite tables in a database that is not
+// the local test database.
+func ErrSeedTargetNotLocal(host string) error {
+	return errorhandle.New(errorhandle.KindInternal, "DP_SEED_TARGET_NOT_LOCAL",
+		fmt.Sprintf("seed import writes only to a local database, not %s", host))
+}
+
 // === KindUnavailable ===
 
 // ErrUpstreamBadStatus is an unexpected non-2xx HTTP status from an upstream

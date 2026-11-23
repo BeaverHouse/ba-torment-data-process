@@ -18,6 +18,12 @@ type Querier interface {
 	ListContentIDs(ctx context.Context) ([]string, error)
 	ListContentIDsWithStartDate(ctx context.Context) ([]ListContentIDsWithStartDateRow, error)
 	ListContentsForRaidList(ctx context.Context) ([]ListContentsForRaidListRow, error)
+	// A fresh test database has no token for this job, and the file manager
+	// refuses its uploads without one.
+	RegisterServiceToken(ctx context.Context, token string) error
+	// Restored ids keep their values, so the next insert continues after them.
+	ResetVideoIDs(ctx context.Context) error
+	TruncateSeedTables(ctx context.Context) error
 	UpsertI18n(ctx context.Context, arg UpsertI18nParams) error
 }
 

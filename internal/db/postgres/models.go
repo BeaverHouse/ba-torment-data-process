@@ -153,3 +153,13 @@ type BatormentV3YoutubeAnalysis struct {
 	UpdatedAt      pgtype.Timestamptz          `json:"updated_at"`
 	DeletedAt      pgtype.Timestamptz          `json:"deleted_at"`
 }
+
+type BatormentV3YoutubeMetadatum struct {
+	ID int32 `json:"id"`
+}
+
+type TinycloverServiceToken struct {
+	Name   string   `json:"name"`
+	Token  string   `json:"token"`
+	Scopes []string `json:"scopes"`
+}
