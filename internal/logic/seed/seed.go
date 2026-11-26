@@ -189,11 +189,15 @@ func Import(ctx context.Context, log logger.Logger, dir string, dryRun bool) err
 }
 
 // refuseRepoDir keeps production data out of the repository. The CLI runs
-// with `go run .`, so the working directory is the repository root. It looks
-// for the directory itself among the repository's, since a link or junction
-// outside the repository can lead into it.
+// with `go run .`, so the working directory is the repository root. Both
+// paths are compared where they really are, since a link or junction outside
+// the repository can lead into it.
 func refuseRepoDir(dir string) error {
 	root, err := os.Getwd()
+	if err != nil {
+		return errorhandle.ErrInternal(err)
+	}
+	root, err = realPath(root)
 	if err != nil {
 		return errorhandle.ErrInternal(err)
 	}
@@ -202,38 +206,15 @@ func refuseRepoDir(dir string) error {
 	if err != nil {
 		return errorhandle.ErrInternal(err)
 	}
-	target, err := os.Stat(existing)
+	target, err := realPath(existing)
 	for errors.Is(err, fs.ErrNotExist) && existing != filepath.Dir(existing) {
 		existing = filepath.Dir(existing)
-		target, err = os.Stat(existing)
+		target, err = realPath(existing)
 	}
 	if err != nil {
 		return errorhandle.ErrInternal(err)
 	}
-
-	inRepo := false
-	err = filepath.WalkDir(root, func(_ string, entry fs.DirEntry, err error) error {
-		// A directory that cannot be listed must not stop a dump outside the repository.
-		if err != nil {
-			return fs.SkipDir
-		}
-		if !entry.IsDir() {
-			return nil
-		}
-		info, err := entry.Info()
-		if err != nil {
-			return err
-		}
-		if os.SameFile(info, target) {
-			inRepo = true
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	if err != nil {
-		return errorhandle.ErrInternal(err)
-	}
-	if inRepo {
+	if rel, err := filepath.Rel(root, target); err == nil && filepath.IsLocal(rel) {
 		return constants.ErrSeedDirInRepo(dir)
 	}
 	return nil

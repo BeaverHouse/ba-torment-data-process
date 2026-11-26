@@ -8,6 +8,7 @@ require (
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/sys v0.50.0
 )
 
 require (
@@ -29,6 +30,5 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4 // indirect
 	golang.org/x/sync v0.25.0 // indirect
-	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 )
