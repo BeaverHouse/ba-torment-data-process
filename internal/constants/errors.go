@@ -102,6 +102,13 @@ func ErrUnknownBuildValue(build string) error {
 		fmt.Sprintf("unknown build value: %s", build))
 }
 
+// ErrSeedDirInRepo refuses a dump directory inside the repository, where
+// production data could be committed.
+func ErrSeedDirInRepo(dir string) error {
+	return errorhandle.New(errorhandle.KindInvalid, "DP_SEED_DIR_IN_REPO",
+		fmt.Sprintf("seed dump directory %s is inside the repository; use a directory outside it", dir))
+}
+
 // ErrInvalidSkillOrder is a DuckDB mulligan value outside the supported 0-5 range.
 func ErrInvalidSkillOrder(value int) error {
 	return errorhandle.New(errorhandle.KindInvalid, "DP_INVALID_SKILL_ORDER",

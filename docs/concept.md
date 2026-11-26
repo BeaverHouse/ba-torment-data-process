@@ -26,11 +26,11 @@ SchaleDB and raw raid DuckDB files remain shared public inputs. Run
 `update-from-schaledb`, `process-raid` and `total-analysis` against the test backend
 to refresh their outputs. Wiki content keeps its existing shared source.
 
-Video metadata and reviewed analysis cannot be rebuilt from those inputs. Seed
-an empty test database with `seed-test`: `export <dir>` reads `contents`,
-`youtube_metadata` and `youtube_analysis` from production, and `import <dir>`
-with `--testenv` loads them with their IDs, registers this job's service token
-and runs the batch above.
+Video metadata and reviewed analysis cannot be rebuilt from those inputs. To
+seed the local test database, rebuild its schema with service-api's
+`setup-test-env --scope batorment`, then run `seed-test import <dir>` with
+`--testenv`. The dump in `<dir>` comes from `seed-test export <dir>` against
+production. Both accept `--dry-run`.
 Copy public objects under `batorment/` as the matching initial storage snapshot.
 Leave the analysis queue, feedback and evaluation run history empty.
 
