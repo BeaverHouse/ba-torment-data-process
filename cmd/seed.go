@@ -22,6 +22,20 @@ var seedExportCmd = &cobra.Command{
 	},
 }
 
+var seedResetCmd = &cobra.Command{
+	Use:   "reset",
+	Short: "Drop the batorment_v3 schema of the local test database and rebuild it empty",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		log, err := logger.NewLogger()
+		if err != nil {
+			return err
+		}
+		return seed.Reset(cmd.Context(), log, dryRun)
+	},
+}
+
 var seedImportCmd = &cobra.Command{
 	Use:   "import <dir>",
 	Short: "Load exported files into the local test database and run the data batch",
@@ -38,6 +52,6 @@ var seedImportCmd = &cobra.Command{
 
 func init() {
 	seedCmd.PersistentFlags().Bool("dry-run", false, "Print what would run without connecting to the database or writing anything")
-	seedCmd.AddCommand(seedExportCmd, seedImportCmd)
+	seedCmd.AddCommand(seedResetCmd, seedExportCmd, seedImportCmd)
 	rootCmd.AddCommand(seedCmd)
 }
