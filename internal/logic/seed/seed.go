@@ -3,8 +3,10 @@ package seed
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -187,18 +189,48 @@ func Import(ctx context.Context, log logger.Logger, dir string, dryRun bool) err
 }
 
 // refuseRepoDir keeps production data out of the repository. The CLI runs
-// with `go run .`, so the working directory is the repository root.
+// with `go run .`, so the working directory is the repository root. It looks
+// for the directory itself among the repository's, since a link or junction
+// outside the repository can lead into it.
 func refuseRepoDir(dir string) error {
 	root, err := os.Getwd()
 	if err != nil {
 		return errorhandle.ErrInternal(err)
 	}
-	abs, err := filepath.Abs(dir)
+	// A directory that does not exist yet is created under its nearest parent that does.
+	existing, err := filepath.Abs(dir)
 	if err != nil {
 		return errorhandle.ErrInternal(err)
 	}
-	if rel, err := filepath.Rel(root, abs); err == nil && filepath.IsLocal(rel) {
-		return constants.ErrSeedDirInRepo(abs)
+	target, err := os.Stat(existing)
+	for errors.Is(err, fs.ErrNotExist) && existing != filepath.Dir(existing) {
+		existing = filepath.Dir(existing)
+		target, err = os.Stat(existing)
+	}
+	if err != nil {
+		return errorhandle.ErrInternal(err)
+	}
+
+	inRepo := false
+	err = filepath.WalkDir(root, func(_ string, entry fs.DirEntry, err error) error {
+		if err != nil || !entry.IsDir() {
+			return err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if os.SameFile(info, target) {
+			inRepo = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	if err != nil {
+		return errorhandle.ErrInternal(err)
+	}
+	if inRepo {
+		return constants.ErrSeedDirInRepo(dir)
 	}
 	return nil
 }
