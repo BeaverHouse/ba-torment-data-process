@@ -213,8 +213,12 @@ func refuseRepoDir(dir string) error {
 
 	inRepo := false
 	err = filepath.WalkDir(root, func(_ string, entry fs.DirEntry, err error) error {
-		if err != nil || !entry.IsDir() {
-			return err
+		// A directory that cannot be listed must not stop a dump outside the repository.
+		if err != nil {
+			return fs.SkipDir
+		}
+		if !entry.IsDir() {
+			return nil
 		}
 		info, err := entry.Info()
 		if err != nil {
