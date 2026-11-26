@@ -189,15 +189,11 @@ func Import(ctx context.Context, log logger.Logger, dir string, dryRun bool) err
 }
 
 // refuseRepoDir keeps production data out of the repository. The CLI runs
-// with `go run .`, so the working directory is the repository root. Both
-// paths are compared where they really are, since a link or junction outside
-// the repository can lead into it.
+// with `go run .`, so the working directory is the repository root. A link or
+// junction outside the repository can lead into it, so the directory is
+// followed to where it really is and its parents are compared with the root.
 func refuseRepoDir(dir string) error {
-	root, err := os.Getwd()
-	if err != nil {
-		return errorhandle.ErrInternal(err)
-	}
-	root, err = realPath(root)
+	root, err := os.Stat(".")
 	if err != nil {
 		return errorhandle.ErrInternal(err)
 	}
@@ -214,10 +210,19 @@ func refuseRepoDir(dir string) error {
 	if err != nil {
 		return errorhandle.ErrInternal(err)
 	}
-	if rel, err := filepath.Rel(root, target); err == nil && filepath.IsLocal(rel) {
-		return constants.ErrSeedDirInRepo(dir)
+	// Directories are compared, not their names: a volume that ignores case
+	// spells one directory many ways. A parent that cannot be read is not the
+	// root, which was read.
+	for {
+		if info, err := os.Stat(target); err == nil && os.SameFile(info, root) {
+			return constants.ErrSeedDirInRepo(dir)
+		}
+		parent := filepath.Dir(target)
+		if parent == target {
+			return nil
+		}
+		target = parent
 	}
-	return nil
 }
 
 func dumpFile(dir, table string) string {
