@@ -119,15 +119,17 @@ CREATE TABLE batorment_v3.video_review (
     CONSTRAINT video_review_video_id_raid_id_unique UNIQUE (video_id, raid_id)
 );
 
-CREATE INDEX idx_students_name ON batorment_v3.students(name_ko);
-CREATE INDEX idx_students_name_ja ON batorment_v3.students(name_ja);
-CREATE INDEX idx_students_name_en ON batorment_v3.students(name_en);
-CREATE INDEX idx_students_name_zh ON batorment_v3.students(name_zh);
-CREATE INDEX idx_students_details ON batorment_v3.students USING GIN (detail);
 CREATE INDEX idx_presents_name ON batorment_v3.presents(name_ko);
 CREATE INDEX idx_presents_tags ON batorment_v3.presents USING GIN (tags);
-CREATE INDEX idx_i18n_category ON batorment_v3.i18n(category);
 CREATE INDEX idx_youtube_analysis_raid_id ON batorment_v3.youtube_analysis(raid_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_youtube_analysis_video_raid ON batorment_v3.youtube_analysis(video_id, raid_id) WHERE deleted_at IS NULL;
 
+ALTER TABLE batorment_v3.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batorment_v3.presents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batorment_v3.i18n ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batorment_v3.contents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batorment_v3.youtube_analysis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batorment_v3.youtube_metadata ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batorment_v3.analysis_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE batorment_v3.video_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batorment_v3.video_review ENABLE ROW LEVEL SECURITY;
