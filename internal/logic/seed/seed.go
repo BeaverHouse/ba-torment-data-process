@@ -30,12 +30,12 @@ import (
 var tables = []string{"batorment_v3.contents", "batorment_v3.youtube_metadata", "batorment_v3.youtube_analysis"}
 
 // The rest is rebuilt from its public inputs, as the scheduled batch does.
-// Presents are skipped: no service reads them.
 var rebuildSteps = []struct {
 	name string
 	run  func(logger.Logger, *postgres.Queries) error
 }{
 	{"update students from SchaleDB", schaledb.ParseSchaleDBStudents},
+	{"update presents from SchaleDB", schaledb.ParseSchaleDBPresents},
 	{"save translations from SchaleDB", schaledb.SaveI18nData},
 	{"process the 5 most recent raids", func(log logger.Logger, _ *postgres.Queries) error {
 		return party.ProcessAllRaids(log, false, 5)
