@@ -37,5 +37,5 @@ See [Refactoring backlog](./refactoring.md) for known weak patterns still in the
 ## Environment variables
 
 Environment variables are configured in [deploy.yaml](../deploy.yaml).  
-The remote environment variables are stored in external secret manager, and are loaded via personal CLI.  
+The remote environment variables are stored in external secret manager.  
 When you want to run this code, set up the environment variables manually with following description.

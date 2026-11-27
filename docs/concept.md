@@ -33,8 +33,8 @@ its `schema_external_stubs.sql`.
 
 Video metadata and reviewed analysis cannot be rebuilt from those inputs. To
 seed the local test database, rebuild its schema with `seed-test reset`, then
-run `seed-test import <dir>`, both with `--testenv`. The dump in `<dir>` comes
-from `seed-test export <dir>` against production. All three accept `--dry-run`.
+run `seed-test import <dir>`. The dump in `<dir>` comes from
+`seed-test export <dir>` against production. All three accept `--dry-run`.
 Copy public objects under `batorment/` as the matching initial storage snapshot.
 Leave the analysis queue, feedback and evaluation run history empty.
 
@@ -58,5 +58,4 @@ workflow (`.github/workflows/docker-build.yml`, manual) builds multi-arch image 
 ### Codebase
 
 Being a CLI, it has no HTTP/MCP layer: `cmd/` (Cobra commands) → `internal/logic/` (domain logic) → `internal/db/postgres/` (sqlc-generated).  
-Errors go through go-common `errorhandle` package; SQL lives in `internal/db/postgres/sql/` (`sqlc generate`).  
-The shared standards are enforced by Austin's harness rules.
+Errors go through go-common `errorhandle` package; SQL lives in `internal/db/postgres/sql/` (`sqlc generate`).
