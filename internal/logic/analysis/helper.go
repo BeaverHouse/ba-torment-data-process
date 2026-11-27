@@ -3,33 +3,8 @@ package analysis
 import (
 	"sort"
 
-	"ba-torment-data-process/internal/constants"
-	"ba-torment-data-process/internal/logic/id"
 	"ba-torment-data-process/internal/types"
 )
-
-// collectAllStudentIDs collects all unique studentIDs from party data
-func collectAllStudentIDs(partyDataMap map[string]*types.BATormentPartyData) map[int]bool {
-	result := make(map[int]bool)
-
-	for _, partyData := range partyDataMap {
-		for _, party := range partyData.PartyDetail {
-			if party.Rank > constants.PlatinumRankLimit {
-				break
-			}
-			for _, members := range party.PartyData {
-				for _, member := range members {
-					if member == 0 {
-						continue
-					}
-					result[id.GetStudentID(member)] = true
-				}
-			}
-		}
-	}
-
-	return result
-}
 
 // intKV is a key-value pair for sorting map[int]int
 type intKV struct {
