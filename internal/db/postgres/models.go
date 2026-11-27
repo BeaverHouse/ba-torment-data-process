@@ -97,15 +97,26 @@ func (ns NullTopLevel) Value() (driver.Value, error) {
 	return string(ns.TopLevel), nil
 }
 
+type BatormentV3AnalysisQueue struct {
+	ID         int32              `json:"id"`
+	RaidID     string             `json:"raid_id"`
+	Status     string             `json:"status"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	SkipReason pgtype.Text        `json:"skip_reason"`
+	Platform   string             `json:"platform"`
+	VideoID    string             `json:"video_id"`
+}
+
 type BatormentV3Content struct {
-	ContentID     string             `json:"content_id"`
-	Title         string             `json:"title"`
-	TopLevel      TopLevel           `json:"top_level"`
-	SearchKeyword string             `json:"search_keyword"`
-	StartDate     pgtype.Timestamptz `json:"start_date"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
+	ContentID        string             `json:"content_id"`
+	Title            string             `json:"title"`
+	TopLevel         TopLevel           `json:"top_level"`
+	StartDate        pgtype.Timestamptz `json:"start_date"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	PostDiscoveredAt pgtype.Timestamptz `json:"post_discovered_at"`
+	KoStartDate      pgtype.Timestamptz `json:"ko_start_date"`
 }
 
 type BatormentV3I18n struct {
@@ -114,9 +125,9 @@ type BatormentV3I18n struct {
 	NameKo    string           `json:"name_ko"`
 	NameJa    string           `json:"name_ja"`
 	NameEn    string           `json:"name_en"`
-	NameZh    string           `json:"name_zh"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	NameZh    string           `json:"name_zh"`
 }
 
 type BatormentV3Present struct {
@@ -133,12 +144,32 @@ type BatormentV3Student struct {
 	StudentID     int32            `json:"student_id"`
 	NameKo        string           `json:"name_ko"`
 	NameJa        string           `json:"name_ja"`
-	NameEn        string           `json:"name_en"`
-	NameZh        string           `json:"name_zh"`
 	SearchKeyword []string         `json:"search_keyword"`
 	Detail        []byte           `json:"detail"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	NameEn        string           `json:"name_en"`
+	NameZh        string           `json:"name_zh"`
+}
+
+type BatormentV3VideoFeedback struct {
+	ID          int32              `json:"id"`
+	VideoID     string             `json:"video_id"`
+	RaidID      string             `json:"raid_id"`
+	UserComment string             `json:"user_comment"`
+	ClientIp    string             `json:"client_ip"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt  pgtype.Timestamptz `json:"resolved_at"`
+}
+
+type BatormentV3VideoReview struct {
+	ID        int32              `json:"id"`
+	VideoID   string             `json:"video_id"`
+	RaidID    string             `json:"raid_id"`
+	Proposal  []byte             `json:"proposal"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type BatormentV3YoutubeAnalysis struct {
@@ -152,4 +183,24 @@ type BatormentV3YoutubeAnalysis struct {
 	CreatedAt      pgtype.Timestamptz          `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz          `json:"updated_at"`
 	DeletedAt      pgtype.Timestamptz          `json:"deleted_at"`
+}
+
+type BatormentV3YoutubeMetadatum struct {
+	ID           int32              `json:"id"`
+	VideoID      string             `json:"video_id"`
+	ChannelUrl   string             `json:"channel_url"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	RaidID       pgtype.Text        `json:"raid_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+	Platform     string             `json:"platform"`
+	ThumbnailUrl string             `json:"thumbnail_url"`
+}
+
+type TinycloverServiceToken struct {
+	Name   string   `json:"name"`
+	Token  string   `json:"token"`
+	Scopes []string `json:"scopes"`
 }

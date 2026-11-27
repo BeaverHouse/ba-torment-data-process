@@ -10,7 +10,7 @@ import (
 )
 
 const getI18n = `-- name: GetI18n :one
-SELECT category, key, name_ko, name_ja, name_en, name_zh, created_at, updated_at FROM batorment_v3.i18n WHERE category = $1 AND key = $2
+SELECT category, key, name_ko, name_ja, name_en, created_at, updated_at, name_zh FROM batorment_v3.i18n WHERE category = $1 AND key = $2
 `
 
 type GetI18nParams struct {
@@ -27,15 +27,15 @@ func (q *Queries) GetI18n(ctx context.Context, arg GetI18nParams) (BatormentV3I1
 		&i.NameKo,
 		&i.NameJa,
 		&i.NameEn,
-		&i.NameZh,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NameZh,
 	)
 	return i, err
 }
 
 const getI18nByCategory = `-- name: GetI18nByCategory :many
-SELECT category, key, name_ko, name_ja, name_en, name_zh, created_at, updated_at FROM batorment_v3.i18n WHERE category = $1
+SELECT category, key, name_ko, name_ja, name_en, created_at, updated_at, name_zh FROM batorment_v3.i18n WHERE category = $1
 `
 
 func (q *Queries) GetI18nByCategory(ctx context.Context, category string) ([]BatormentV3I18n, error) {
@@ -53,9 +53,9 @@ func (q *Queries) GetI18nByCategory(ctx context.Context, category string) ([]Bat
 			&i.NameKo,
 			&i.NameJa,
 			&i.NameEn,
-			&i.NameZh,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.NameZh,
 		); err != nil {
 			return nil, err
 		}
