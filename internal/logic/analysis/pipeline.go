@@ -33,16 +33,12 @@ func RunTotalAnalysisPipeline(log logger.Logger, dryRun bool) error {
 
 	log.Info("Found content IDs", logger.Field{Key: "count", Value: len(contentIDs)})
 
-	log.Info("Downloading party data from S3...")
-	partyDataMap := DownloadAllPartyData(log, contentIDs)
-	log.Info("Successfully downloaded party data", logger.Field{Key: "downloaded", Value: len(partyDataMap)}, logger.Field{Key: "total", Value: len(contentIDs)})
+	log.Info("Running total analysis...")
+	result := RunTotalAnalysis(log, contentIDs)
 
-	if len(partyDataMap) == 0 {
+	if len(result.RaidAnalyses) == 0 {
 		return errorhandle.ErrInternalMsg("no party data available for analysis")
 	}
-
-	log.Info("Running total analysis...")
-	result := RunTotalAnalysis(log, partyDataMap, contentIDs)
 
 	if err := storage.MarshalAndUpload(log, result, "batorment/v3", "total-analysis.json", dryRun, "Total analysis completed"); err != nil {
 		return err

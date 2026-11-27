@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	"ba-torment-data-process/internal/constants"
@@ -9,190 +10,158 @@ import (
 	"ba-torment-data-process/internal/types"
 )
 
-// RunCharacterAnalyses runs analysis for all characters
-// sortedContentIDs provides the order for usageHistory (sorted by start_date)
-func RunCharacterAnalyses(partyDataMap map[string]*types.BATormentPartyData, sortedContentIDs []string) []types.CharacterAnalysisResult {
-	allStudentIDs := collectAllStudentIDs(partyDataMap)
-
-	var results []types.CharacterAnalysisResult
-	for studentID := range allStudentIDs {
-		result := AnalyzeCharacter(studentID, partyDataMap, sortedContentIDs)
-		results = append(results, result)
-	}
-
-	// Sort by studentID
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].StudentID < results[j].StudentID
-	})
-
-	return results
+// characterTotals holds one character's figures summed over the raids added so far.
+type characterTotals struct {
+	usage        map[string]types.RaidUsage // by raid ID
+	star         map[string]map[string]int  // by group ID (e.g., "3S26-1", "3S26-3" -> "3S26")
+	asOwnByGroup map[string]int
+	asAssist     int
+	asOwn        int
+	coUsage      map[int]int // co-appearances with other characters
+	appearances  int
 }
 
-// AnalyzeCharacter analyzes a single character across all raids
-// sortedContentIDs provides the order for usageHistory (sorted by start_date)
-func AnalyzeCharacter(studentID int, partyDataMap map[string]*types.BATormentPartyData, sortedContentIDs []string) types.CharacterAnalysisResult {
-	var usageHistory []types.RaidUsage
-
-	// Group star distribution by groupID (e.g., "3S26-1", "3S26-3" -> "3S26")
-	groupStar := make(map[string]map[string]int)
-	groupAsOwn := make(map[string]int)
-	var groupOrder []string // Track order of first appearance
-
-	totalAsAssist := 0
-	totalAsOwn := 0
-
-	// Synergy calculation: count of co-appearances with other characters
-	coUsageCount := make(map[int]int)
-	totalAppearances := 0
-
-	for _, raidID := range sortedContentIDs {
-		partyData, ok := partyDataMap[raidID]
-		if !ok {
-			continue
-		}
-		raidUsage, raidStar, asAssist, asOwn, coChars, appearances := analyzeCharacterInRaid(studentID, partyData)
-
-		// usageHistory: individual raid entries (no grouping)
-		usageHistory = append(usageHistory, types.RaidUsage{
-			RaidID:           raidID,
-			UserCount:        raidUsage.UserCount,
-			LunaticUserCount: raidUsage.LunaticUserCount,
-		})
-
-		// starDistribution: group by groupID
-		groupID := id.ExtractGroupID(raidID)
-		if _, exists := groupStar[groupID]; !exists {
-			groupStar[groupID] = make(map[string]int)
-			groupOrder = append(groupOrder, groupID)
-		}
-
-		for key, count := range raidStar {
-			groupStar[groupID][key] += count
-		}
-		groupAsOwn[groupID] += asOwn
-
-		totalAsAssist += asAssist
-		totalAsOwn += asOwn
-
-		for coCharID, count := range coChars {
-			coUsageCount[coCharID] += count
-		}
-		totalAppearances += appearances
-	}
-
-	// Get latest star distribution (200+ own usage)
-	var starDistribution *types.RaidStarDistribution
-	for i := len(groupOrder) - 1; i >= 0; i-- {
-		groupID := groupOrder[i]
-		if groupAsOwn[groupID] >= 200 {
-			starDistribution = &types.RaidStarDistribution{
-				RaidID:       groupID,
-				Distribution: groupStar[groupID],
-			}
-			break
-		}
-	}
-
-	// Calculate synergy (top 3, >= 5%)
-	topSynergyChars := calculateTopSynergy(coUsageCount, totalAppearances, 3)
-
-	totalCount := totalAsAssist + totalAsOwn
-	assistRatio := 0.0
-	if totalCount > 0 {
-		assistRatio = float64(totalAsAssist) / float64(totalCount)
-	}
-
-	return types.CharacterAnalysisResult{
-		StudentID:        studentID,
-		UsageHistory:     usageHistory,
-		StarDistribution: starDistribution,
-		AssistStats: types.AssistUsageStats{
-			AsAssistCount: totalAsAssist,
-			AsOwnCount:    totalAsOwn,
-			TotalCount:    totalCount,
-			AssistRatio:   assistRatio,
-		},
-		TopSynergyChars: topSynergyChars,
-	}
+// characterAnalysis sums every character's figures raid by raid, so a raid's
+// party data can be dropped as soon as it has been added.
+type characterAnalysis struct {
+	raidIDs  []string // in the order added
+	groupIDs []string // in order of first appearance
+	totals   map[int]*characterTotals
 }
 
-// analyzeCharacterInRaid analyzes a character in a single raid
-func analyzeCharacterInRaid(studentID int, partyData *types.BATormentPartyData) (
-	usage types.RaidUsage,
-	starDist map[string]int,
-	asAssist int,
-	asOwn int,
-	coChars map[int]int,
-	appearances int,
-) {
-	starDist = make(map[string]int)
-	coChars = make(map[int]int)
-	lunaticUserCount := 0
+// addRaid adds one raid's parties to every character in them.
+func (a *characterAnalysis) addRaid(raidID string, partyData *types.BATormentPartyData) {
+	a.raidIDs = append(a.raidIDs, raidID)
+	groupID := id.ExtractGroupID(raidID)
+	if !slices.Contains(a.groupIDs, groupID) {
+		a.groupIDs = append(a.groupIDs, groupID)
+	}
 
 	for _, party := range partyData.PartyDetail {
 		if party.Rank > constants.PlatinumRankLimit {
 			break
 		}
+		a.addParty(raidID, groupID, party)
+	}
+}
 
-		isLunatic := party.Score >= constants.LunaticMinScore
-		foundInAnySquad := false
+func (a *characterAnalysis) addParty(raidID, groupID string, party types.BATormentPartyDetail) {
+	isLunatic := party.Score >= constants.LunaticMinScore
+	inParty := make(map[int]bool)
 
-		for _, squad := range party.PartyData {
-			var squadMembers []int
-			foundInThisSquad := false
+	for _, squad := range party.PartyData {
+		var squadMembers []int
 
-			for _, member := range squad {
-				if member == 0 {
-					continue
-				}
-
-				memberStudentID, star, weaponStar, isAssist := id.ParseStudentDetailID(member)
-
-				// Collect squad members for synergy
-				squadMembers = append(squadMembers, memberStudentID)
-
-				if memberStudentID == studentID {
-					foundInThisSquad = true
-					foundInAnySquad = true
-
-					if isAssist {
-						asAssist++
-						if isLunatic {
-							lunaticUserCount++
-						}
-					} else {
-						asOwn++
-						if isLunatic {
-							lunaticUserCount++
-						}
-						// Star distribution (exclude assist)
-						key := fmt.Sprintf("%d%d", star, weaponStar)
-						starDist[key]++
-					}
-				}
+		for _, member := range squad {
+			if member == 0 {
+				continue
 			}
 
-			// Count co-usage only for squads where this character appears
-			if foundInThisSquad {
-				for _, memberID := range squadMembers {
-					if memberID != studentID {
-						coChars[memberID]++
-					}
+			studentID, star, weaponStar, isAssist := id.ParseStudentDetailID(member)
+			squadMembers = append(squadMembers, studentID)
+			inParty[studentID] = true
+
+			if a.totals[studentID] == nil {
+				a.totals[studentID] = &characterTotals{
+					usage:        make(map[string]types.RaidUsage),
+					star:         make(map[string]map[string]int),
+					asOwnByGroup: make(map[string]int),
+					coUsage:      make(map[int]int),
+				}
+			}
+			a.totals[studentID].addUse(raidID, groupID, isLunatic, isAssist, fmt.Sprintf("%d%d", star, weaponStar))
+		}
+
+		// A character counts its squad mates once per squad, however often it is in it.
+		for i, studentID := range squadMembers {
+			if slices.Contains(squadMembers[:i], studentID) {
+				continue
+			}
+			for _, memberID := range squadMembers {
+				if memberID != studentID {
+					a.totals[studentID].coUsage[memberID]++
 				}
 			}
 		}
+	}
 
-		if foundInAnySquad {
-			appearances++
+	for studentID := range inParty {
+		a.totals[studentID].appearances++
+	}
+}
+
+func (t *characterTotals) addUse(raidID, groupID string, isLunatic, isAssist bool, starKey string) {
+	usage := t.usage[raidID]
+	usage.UserCount++
+	if isLunatic {
+		usage.LunaticUserCount++
+	}
+	t.usage[raidID] = usage
+
+	if isAssist {
+		t.asAssist++
+		return
+	}
+	t.asOwn++
+	t.asOwnByGroup[groupID]++
+	// Star distribution (exclude assist)
+	if t.star[groupID] == nil {
+		t.star[groupID] = make(map[string]int)
+	}
+	t.star[groupID][starKey]++
+}
+
+// results returns every character's analysis, sorted by studentID.
+func (a *characterAnalysis) results() []types.CharacterAnalysisResult {
+	var results []types.CharacterAnalysisResult
+
+	for studentID, totals := range a.totals {
+		var usageHistory []types.RaidUsage
+		for _, raidID := range a.raidIDs {
+			usage := totals.usage[raidID]
+			usage.RaidID = raidID
+			usageHistory = append(usageHistory, usage)
 		}
+
+		// Get latest star distribution (200+ own usage)
+		var starDistribution *types.RaidStarDistribution
+		for i := len(a.groupIDs) - 1; i >= 0; i-- {
+			groupID := a.groupIDs[i]
+			if totals.asOwnByGroup[groupID] >= 200 {
+				starDistribution = &types.RaidStarDistribution{
+					RaidID:       groupID,
+					Distribution: totals.star[groupID],
+				}
+				break
+			}
+		}
+
+		totalCount := totals.asAssist + totals.asOwn
+		assistRatio := 0.0
+		if totalCount > 0 {
+			assistRatio = float64(totals.asAssist) / float64(totalCount)
+		}
+
+		results = append(results, types.CharacterAnalysisResult{
+			StudentID:        studentID,
+			UsageHistory:     usageHistory,
+			StarDistribution: starDistribution,
+			AssistStats: types.AssistUsageStats{
+				AsAssistCount: totals.asAssist,
+				AsOwnCount:    totals.asOwn,
+				TotalCount:    totalCount,
+				AssistRatio:   assistRatio,
+			},
+			// Synergy: top 3, >= 5%
+			TopSynergyChars: calculateTopSynergy(totals.coUsage, totals.appearances, 3),
+		})
 	}
 
-	usage = types.RaidUsage{
-		UserCount:        asAssist + asOwn,
-		LunaticUserCount: lunaticUserCount,
-	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].StudentID < results[j].StudentID
+	})
 
-	return
+	return results
 }
 
 // calculateTopSynergy calculates top N synergy characters (>= 5% only)

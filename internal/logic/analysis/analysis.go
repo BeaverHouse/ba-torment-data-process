@@ -36,19 +36,6 @@ func DownloadPartyData(log logger.Logger, contentID string) *types.BATormentPart
 	return &partyData
 }
 
-// DownloadAllPartyData downloads party data for all content IDs
-func DownloadAllPartyData(log logger.Logger, contentIDs []string) map[string]*types.BATormentPartyData {
-	result := make(map[string]*types.BATormentPartyData)
-
-	for _, contentID := range contentIDs {
-		if partyData := DownloadPartyData(log, contentID); partyData != nil {
-			result[contentID] = partyData
-		}
-	}
-
-	return result
-}
-
 // fetchPartyData fetches party data from URL (non-fatal on error)
 func fetchPartyData(log logger.Logger, url string) ([]byte, error) {
 	start := time.Now()
@@ -71,19 +58,25 @@ func fetchPartyData(log logger.Logger, url string) ([]byte, error) {
 	return body, nil
 }
 
-// RunTotalAnalysis runs the complete analysis
-// sortedContentIDs provides the order for raidAnalyses (sorted by start_date)
-func RunTotalAnalysis(log logger.Logger, partyDataMap map[string]*types.BATormentPartyData, sortedContentIDs []string) *types.TotalAnalysisOutput {
-	log.Info("Starting total analysis", logger.Field{Key: "raids", Value: len(partyDataMap)})
+// RunTotalAnalysis runs the complete analysis over the raids whose party data
+// downloads, in the order of sortedContentIDs (sorted by start_date).
+// It holds one raid's party data at a time: holding every raid's at once
+// outgrew the job's memory limit as raids were added.
+func RunTotalAnalysis(log logger.Logger, sortedContentIDs []string) *types.TotalAnalysisOutput {
+	var raidAnalyses []types.RaidAnalysisResult
+	characters := characterAnalysis{totals: make(map[int]*characterTotals)}
 
-	// Raid analysis
-	log.Info("Running raid analyses...")
-	raidAnalyses := RunRaidAnalyses(partyDataMap, sortedContentIDs)
-	log.Info("Completed raid analyses", logger.Field{Key: "raids", Value: len(raidAnalyses)})
+	for _, raidID := range sortedContentIDs {
+		partyData := DownloadPartyData(log, raidID)
+		if partyData == nil {
+			continue
+		}
+		raidAnalyses = append(raidAnalyses, AnalyzeRaid(raidID, partyData))
+		characters.addRaid(raidID, partyData)
+	}
+	log.Info("Completed raid analyses", logger.Field{Key: "raids", Value: len(raidAnalyses)}, logger.Field{Key: "total", Value: len(sortedContentIDs)})
 
-	// Character analysis
-	log.Info("Running character analyses...")
-	characterAnalyses := RunCharacterAnalyses(partyDataMap, sortedContentIDs)
+	characterAnalyses := characters.results()
 	log.Info("Completed character analyses", logger.Field{Key: "characters", Value: len(characterAnalyses)})
 
 	// Calculate and assign overall rankings
